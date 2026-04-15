@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCameraUsageDescription</key>
+	<string>EgoCapture needs camera access to record egocentric video for AI training data collection.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>EgoCapture may use the microphone for synchronized audio capture.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>EgoCapture needs motion sensor access to record IMU data (accelerometer and gyroscope) synchronized with video.</string>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UILaunchScreen</key>
+	<dict/>
+</dict>
+</plist>

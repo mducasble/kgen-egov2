@@ -1,0 +1,509 @@
+#!/bin/bash
+# ==============================================================
+# EgoCapture - Xcode Project Setup Script
+# ==============================================================
+# 
+# Este script configura o projeto EgoCapture no seu Mac.
+#
+# COMO USAR:
+#   1. Baixe a pasta EgoCapture inteira do Claude
+#   2. Abra o Terminal
+#   3. cd para a pasta EgoCapture (onde está este script)
+#   4. Execute:  chmod +x setup_xcode.sh && ./setup_xcode.sh
+#   5. Abra EgoCapture.xcodeproj no Xcode
+#
+# ==============================================================
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "================================================"
+echo "  EgoCapture - Configurando projeto Xcode"
+echo "================================================"
+echo ""
+
+# Check if Xcode command line tools are available
+if ! command -v xcodebuild &> /dev/null; then
+    echo "❌ Xcode command line tools não encontrados."
+    echo "   Execute: xcode-select --install"
+    exit 1
+fi
+
+# Check if we have the Swift source files
+if [ ! -d "EgoCapture" ]; then
+    echo "❌ Pasta 'EgoCapture/' não encontrada."
+    echo "   Certifique-se de estar na pasta raiz do projeto."
+    exit 1
+fi
+
+echo "✅ Arquivos Swift encontrados:"
+find EgoCapture -name "*.swift" | wc -l | xargs echo "   " "arquivos .swift"
+echo ""
+
+# ---- Method: Generate project using swift package + xcodeproj ----
+
+# Create a Package.swift for the project structure
+# We'll use a minimal Xcode project generation approach
+
+echo "📦 Criando projeto Xcode..."
+
+# Remove old xcodeproj if it exists (might be corrupted from download)
+rm -rf EgoCapture.xcodeproj
+
+# Create a fresh xcodeproj bundle
+mkdir -p EgoCapture.xcodeproj
+
+# Write the project.pbxproj
+cat > EgoCapture.xcodeproj/project.pbxproj << 'PBXPROJ_EOF'
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 /* EgoCaptureApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000001; };
+		AA000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000002; };
+		AA000003 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000003; };
+		AA000004 /* SessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000004; };
+		AA000005 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000005; };
+		AA000010 /* IMUSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000010; };
+		AA000011 /* HeadPoseSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000011; };
+		AA000012 /* CameraCalibration.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000012; };
+		AA000013 /* CameraMountConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000013; };
+		AA000014 /* HandLandmarkSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000014; };
+		AA000015 /* HandPoseSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000015; };
+		AA000016 /* FacePresenceSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000016; };
+		AA000017 /* FrameQCMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000017; };
+		AA000018 /* SessionMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000018; };
+		AA000019 /* SessionManifest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000019; };
+		AA000020 /* VideoTimestamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000020; };
+		AA000030 /* VideoCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000030; };
+		AA000031 /* IMUCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000031; };
+		AA000032 /* HeadPoseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000032; };
+		AA000033 /* CameraCalibrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000033; };
+		AA000034 /* MountCalibrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000034; };
+		AA000040 /* HandLandmarkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000040; };
+		AA000041 /* HandPoseDerivationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000041; };
+		AA000042 /* FacePresenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000042; };
+		AA000043 /* FrameQCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000043; };
+		AA000050 /* SessionPackagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000050; };
+		AA000051 /* JSONLWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000051; };
+		AA000060 /* RecordingOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000060; };
+		AA000061 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000061; };
+		AA000070 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB000070; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AC000001 /* EgoCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EgoCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB000001 /* EgoCaptureApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EgoCaptureApp.swift; sourceTree = "<group>"; };
+		AB000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AB000003 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
+		AB000004 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
+		AB000005 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AB000010 /* IMUSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMUSample.swift; sourceTree = "<group>"; };
+		AB000011 /* HeadPoseSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadPoseSample.swift; sourceTree = "<group>"; };
+		AB000012 /* CameraCalibration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCalibration.swift; sourceTree = "<group>"; };
+		AB000013 /* CameraMountConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMountConfig.swift; sourceTree = "<group>"; };
+		AB000014 /* HandLandmarkSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandLandmarkSample.swift; sourceTree = "<group>"; };
+		AB000015 /* HandPoseSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandPoseSample.swift; sourceTree = "<group>"; };
+		AB000016 /* FacePresenceSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacePresenceSample.swift; sourceTree = "<group>"; };
+		AB000017 /* FrameQCMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameQCMetrics.swift; sourceTree = "<group>"; };
+		AB000018 /* SessionMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionMetadata.swift; sourceTree = "<group>"; };
+		AB000019 /* SessionManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManifest.swift; sourceTree = "<group>"; };
+		AB000020 /* VideoTimestamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoTimestamp.swift; sourceTree = "<group>"; };
+		AB000030 /* VideoCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCaptureService.swift; sourceTree = "<group>"; };
+		AB000031 /* IMUCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMUCaptureService.swift; sourceTree = "<group>"; };
+		AB000032 /* HeadPoseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadPoseService.swift; sourceTree = "<group>"; };
+		AB000033 /* CameraCalibrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCalibrationService.swift; sourceTree = "<group>"; };
+		AB000034 /* MountCalibrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MountCalibrationService.swift; sourceTree = "<group>"; };
+		AB000040 /* HandLandmarkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandLandmarkService.swift; sourceTree = "<group>"; };
+		AB000041 /* HandPoseDerivationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandPoseDerivationService.swift; sourceTree = "<group>"; };
+		AB000042 /* FacePresenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacePresenceService.swift; sourceTree = "<group>"; };
+		AB000043 /* FrameQCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameQCService.swift; sourceTree = "<group>"; };
+		AB000050 /* SessionPackagingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionPackagingService.swift; sourceTree = "<group>"; };
+		AB000051 /* JSONLWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLWriter.swift; sourceTree = "<group>"; };
+		AB000060 /* RecordingOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingOrchestrator.swift; sourceTree = "<group>"; };
+		AB000061 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
+		AB000070 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AB000080 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AD000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AE000001 = {
+			isa = PBXGroup;
+			children = (
+				AE000002 /* EgoCapture */,
+				AE000099 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AE000099 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AC000001 /* EgoCapture.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AE000002 /* EgoCapture */ = {
+			isa = PBXGroup;
+			children = (
+				AB000001 /* EgoCaptureApp.swift */,
+				AB000060 /* RecordingOrchestrator.swift */,
+				AB000061 /* SessionManager.swift */,
+				AE000003 /* Models */,
+				AE000004 /* Services */,
+				AE000007 /* Views */,
+				AE000008 /* Utils */,
+				AB000070 /* Assets.xcassets */,
+				AB000080 /* Info.plist */,
+			);
+			path = EgoCapture;
+			sourceTree = "<group>";
+		};
+		AE000003 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AB000010 /* IMUSample.swift */,
+				AB000011 /* HeadPoseSample.swift */,
+				AB000012 /* CameraCalibration.swift */,
+				AB000013 /* CameraMountConfig.swift */,
+				AB000014 /* HandLandmarkSample.swift */,
+				AB000015 /* HandPoseSample.swift */,
+				AB000016 /* FacePresenceSample.swift */,
+				AB000017 /* FrameQCMetrics.swift */,
+				AB000018 /* SessionMetadata.swift */,
+				AB000019 /* SessionManifest.swift */,
+				AB000020 /* VideoTimestamp.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AE000004 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AE000005 /* Capture */,
+				AE000006 /* Vision */,
+				AE000009 /* Packaging */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		AE000005 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				AB000030 /* VideoCaptureService.swift */,
+				AB000031 /* IMUCaptureService.swift */,
+				AB000032 /* HeadPoseService.swift */,
+				AB000033 /* CameraCalibrationService.swift */,
+				AB000034 /* MountCalibrationService.swift */,
+			);
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		AE000006 /* Vision */ = {
+			isa = PBXGroup;
+			children = (
+				AB000040 /* HandLandmarkService.swift */,
+				AB000041 /* HandPoseDerivationService.swift */,
+				AB000042 /* FacePresenceService.swift */,
+				AB000043 /* FrameQCService.swift */,
+			);
+			path = Vision;
+			sourceTree = "<group>";
+		};
+		AE000007 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AB000002 /* ContentView.swift */,
+				AB000003 /* RecordingView.swift */,
+				AB000004 /* SessionListView.swift */,
+				AB000005 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		AE000008 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				AB000051 /* JSONLWriter.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		AE000009 /* Packaging */ = {
+			isa = PBXGroup;
+			children = (
+				AB000050 /* SessionPackagingService.swift */,
+			);
+			path = Packaging;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AF000001 /* EgoCapture */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AG000003;
+			buildPhases = (
+				AF000002 /* Sources */,
+				AD000001 /* Frameworks */,
+				AF000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = EgoCapture;
+			productName = EgoCapture;
+			productReference = AC000001 /* EgoCapture.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AH000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1520;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					AF000001 = {
+						CreatedOnToolsVersion = 15.2;
+					};
+				};
+			};
+			buildConfigurationList = AG000001;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AE000001;
+			productRefGroup = AE000099 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AF000001 /* EgoCapture */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AF000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000070 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AF000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001,
+				AA000002,
+				AA000003,
+				AA000004,
+				AA000005,
+				AA000010,
+				AA000011,
+				AA000012,
+				AA000013,
+				AA000014,
+				AA000015,
+				AA000016,
+				AA000017,
+				AA000018,
+				AA000019,
+				AA000020,
+				AA000030,
+				AA000031,
+				AA000032,
+				AA000033,
+				AA000034,
+				AA000040,
+				AA000041,
+				AA000042,
+				AA000043,
+				AA000050,
+				AA000051,
+				AA000060,
+				AA000061,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AG000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AG000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AG000020 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = EgoCapture/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.egocapture.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AG000021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = EgoCapture/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.egocapture.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AG000001 /* Build configuration list for PBXProject "EgoCapture" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AG000010 /* Debug */,
+				AG000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AG000003 /* Build configuration list for PBXNativeTarget "EgoCapture" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AG000020 /* Debug */,
+				AG000021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AH000001 /* Project object */;
+}
+PBXPROJ_EOF
+
+echo "✅ EgoCapture.xcodeproj criado"
+echo ""
+
+# Verify the structure
+echo "📁 Estrutura final do projeto:"
+echo ""
+find . -not -path '*/\.*' -not -path './setup_xcode.sh' | head -50 | sed 's|^\./||' | sort
+echo ""
+echo "================================================"
+echo "  ✅ Projeto configurado com sucesso!"
+echo ""
+echo "  Próximos passos:"
+echo "  1. Abra EgoCapture.xcodeproj no Xcode"
+echo "  2. Selecione seu Team em Signing & Capabilities"
+echo "  3. Conecte o iPhone via USB"
+echo "  4. Selecione o iPhone como destino (não o Simulador)"
+echo "  5. Pressione ⌘R para compilar e rodar"
+echo "================================================"
