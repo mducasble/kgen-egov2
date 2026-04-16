@@ -106,10 +106,8 @@ struct RecordingView: View {
 
     private var previewContent: some View {
         Group {
-            if let preview = orchestrator.previewImage {
-                Image(uiImage: preview)
-                    .resizable()
-                    .scaledToFill()
+            if let session = orchestrator.captureSession {
+                CameraPreviewView(session: session)
             } else {
                 ZStack {
                     Rectangle().fill(.black.opacity(0.15))

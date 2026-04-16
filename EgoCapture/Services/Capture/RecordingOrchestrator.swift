@@ -2,8 +2,8 @@ import Foundation
 import UIKit
 import AVFoundation
 
-private let kPipelineVersion = "7.1.0"
-private let kPipelineBuild = "imu-only-deterministic-sync"
+private let kPipelineVersion = "7.2.0"
+private let kPipelineBuild = "imu-only-zero-overhead"
 
 @MainActor
 final class RecordingOrchestrator: ObservableObject {
@@ -17,7 +17,9 @@ final class RecordingOrchestrator: ObservableObject {
     @Published var frameCount: Int = 0
     @Published var imuSampleCount: Int = 0
     @Published var lastError: String?
-    @Published var previewImage: UIImage?
+
+    /// The live AVCaptureSession — used by CameraPreviewView for hardware-composited preview.
+    @Published var captureSession: AVCaptureSession?
 
     // MARK: - Services
 
@@ -49,7 +51,7 @@ final class RecordingOrchestrator: ObservableObject {
     }
 
     private func startRecordingInternal() {
-        lastError = nil; previewImage = nil; statusMessage = "Starting..."
+        lastError = nil; statusMessage = "Starting..."
         UIApplication.shared.isIdleTimerDisabled = true
         let session = SessionManager.shared.createSession()
         currentSessionId = session.id; sessionDir = session.directory
@@ -64,6 +66,7 @@ final class RecordingOrchestrator: ObservableObject {
             let video = VideoCaptureService(outputURL: dir.appendingPathComponent("video.mp4"))
             video.delegate = self; videoCaptureService = video
             try video.setup()
+            captureSession = video.captureSession
             try video.startRecording(epochStartMs: recordingStartEpochMs)
 
             isRecording = true; statusMessage = "Recording"
@@ -351,7 +354,8 @@ final class RecordingOrchestrator: ObservableObject {
     }
 
     private func cleanup() {
-        videoCaptureService = nil; imuCaptureService = nil; previewImage = nil
+        captureSession = nil
+        videoCaptureService = nil; imuCaptureService = nil
     }
 
     private func ensureCameraPermission() async -> Bool {
@@ -372,14 +376,13 @@ final class RecordingOrchestrator: ObservableObject {
 
 extension RecordingOrchestrator: VideoCaptureDelegate {
 
-    /// Called from captureQueue. Preview is a tiny 240p UIImage (already rendered).
-    /// No pixel buffer is retained. UI updates throttled to match preview cadence.
-    nonisolated func videoCaptureService(_ service: VideoCaptureService, didCaptureFrame frameIndex: Int, relativeMs: Double, timestampNs: UInt64, preview: UIImage?) {
-        guard frameIndex - lastUIUpdateFrame >= 8 else { return }
+    /// Called from captureQueue. Returns immediately (< 0.1ms).
+    /// Preview is handled by AVCaptureVideoPreviewLayer — zero cost here.
+    nonisolated func videoCaptureService(_ service: VideoCaptureService, didCaptureFrame frameIndex: Int, relativeMs: Double, timestampNs: UInt64) {
+        guard frameIndex - lastUIUpdateFrame >= 15 else { return }
         lastUIUpdateFrame = frameIndex
         Task { @MainActor [weak self] in
             self?.frameCount = frameIndex
-            if let preview { self?.previewImage = preview }
         }
     }
 }

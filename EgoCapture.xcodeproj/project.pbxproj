@@ -41,6 +41,7 @@
 		AA000052 /* ProcessingScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000052 /* ProcessingScheduler.swift */; };
 		AA000061 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000061 /* SessionManager.swift */; };
 		AA000070 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB000070 /* Assets.xcassets */; };
+		AA000006 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000006 /* CameraPreviewView.swift */; };
 		BA100001 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = BA100002 /* hand_landmarker.task */; };
 /* End PBXBuildFile section */
 
@@ -57,6 +58,7 @@
 		AB000003 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
 		AB000004 /* SessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
 		AB000005 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AB000006 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		AB000010 /* IMUSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMUSample.swift; sourceTree = "<group>"; };
 		AB000011 /* HeadPoseSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadPoseSample.swift; sourceTree = "<group>"; };
 		AB000012 /* CameraCalibration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCalibration.swift; sourceTree = "<group>"; };
@@ -196,6 +198,7 @@
 				AB000003 /* RecordingView.swift */,
 				AB000004 /* SessionListView.swift */,
 				AB000005 /* SettingsView.swift */,
+				AB000006 /* CameraPreviewView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -375,6 +378,7 @@
 				AA000003 /* RecordingView.swift in Sources */,
 				AA000004 /* SessionListView.swift in Sources */,
 				AA000005 /* SettingsView.swift in Sources */,
+				AA000006 /* CameraPreviewView.swift in Sources */,
 				AA000010 /* IMUSample.swift in Sources */,
 				AA000011 /* HeadPoseSample.swift in Sources */,
 				AA000012 /* CameraCalibration.swift in Sources */,

@@ -1,13 +1,11 @@
 import Foundation
 import AVFoundation
-import UIKit
 import CoreVideo
 
 protocol VideoCaptureDelegate: AnyObject {
-    /// Called from captureQueue (.userInteractive). Must return quickly.
-    /// The pixelBuffer is only valid for the duration of this call — do NOT retain it
-    /// in async closures. A small preview image is provided periodically.
-    func videoCaptureService(_ service: VideoCaptureService, didCaptureFrame frameIndex: Int, relativeMs: Double, timestampNs: UInt64, preview: UIImage?)
+    /// Called from captureQueue (.userInteractive). Must return in < 0.5ms.
+    /// No pixel buffer is passed — nothing to retain or process.
+    func videoCaptureService(_ service: VideoCaptureService, didCaptureFrame frameIndex: Int, relativeMs: Double, timestampNs: UInt64)
 }
 
 /// IMU-only mode video capture — single-queue architecture.
@@ -28,7 +26,8 @@ final class VideoCaptureService: NSObject {
     private let gopLength: Int = 30
     private let clock = MonotonicClock.shared
 
-    private var captureSession: AVCaptureSession?
+    /// Exposed for AVCaptureVideoPreviewLayer (hardware-composited, zero-cost preview).
+    private(set) var captureSession: AVCaptureSession?
     private var captureDevice: AVCaptureDevice?
     private var assetWriter: AVAssetWriter?
     private var assetWriterInput: AVAssetWriterInput?
@@ -233,26 +232,7 @@ final class VideoCaptureService: NSObject {
 
         appendToWriter(pixelBuffer, timestamp: timestamp)
 
-        var preview: UIImage? = nil
-        if idx % 8 == 0 {
-            preview = Self.tinyPreview(from: pixelBuffer)
-        }
-
-        delegate?.videoCaptureService(self, didCaptureFrame: idx, relativeMs: relativeMs, timestampNs: frameNs, preview: preview)
-    }
-
-    /// 240p preview rendered inline on captureQueue. Takes ~1-2ms.
-    /// No pixel buffer is retained beyond this call.
-    private static let previewContext = CIContext(options: [.cacheIntermediates: false, .useSoftwareRenderer: false])
-
-    private static func tinyPreview(from pb: CVPixelBuffer) -> UIImage? {
-        let ci = CIImage(cvPixelBuffer: pb)
-        let h = Double(CVPixelBufferGetHeight(pb))
-        guard h > 0 else { return nil }
-        let scale = 240.0 / h
-        let scaled = ci.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        guard let cg = previewContext.createCGImage(scaled, from: scaled.extent) else { return nil }
-        return UIImage(cgImage: cg, scale: 1.0, orientation: .up)
+        delegate?.videoCaptureService(self, didCaptureFrame: idx, relativeMs: relativeMs, timestampNs: frameNs)
     }
 
     /// Inline on captureQueue. Checks backpressure BEFORE touching the encoder.
@@ -287,7 +267,7 @@ final class VideoCaptureService: NSObject {
             AVVideoAverageBitRateKey: targetBitrate,
             AVVideoMaxKeyFrameIntervalKey: gopLength,
             AVVideoAllowFrameReorderingKey: false,
-            AVVideoProfileLevelKey: AVVideoProfileLevelH264BaselineAutoLevel,
+            AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
             AVVideoExpectedSourceFrameRateKey: targetFPS
         ]
         let settings: [String: Any] = [
