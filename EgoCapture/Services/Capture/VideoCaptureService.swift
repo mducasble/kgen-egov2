@@ -4,19 +4,23 @@ import UIKit
 import CoreVideo
 
 protocol VideoCaptureDelegate: AnyObject {
-    /// Called from captureQueue (.userInteractive). Must return immediately.
-    /// The pixelBuffer is valid only for the duration of this call unless retained.
-    func videoCaptureService(_ service: VideoCaptureService, didOutputPixelBuffer pixelBuffer: CVPixelBuffer, timestamp: CMTime, relativeMs: Double, timestampNs: UInt64, frameIndex: Int)
+    /// Called from captureQueue (.userInteractive). Must return quickly.
+    /// The pixelBuffer is only valid for the duration of this call — do NOT retain it
+    /// in async closures. A small preview image is provided periodically.
+    func videoCaptureService(_ service: VideoCaptureService, didCaptureFrame frameIndex: Int, relativeMs: Double, timestampNs: UInt64, preview: UIImage?)
 }
 
-/// Context Mode production video capture with separated queue architecture.
+/// IMU-only mode video capture — single-queue architecture.
 ///
-/// Queue model:
-///   captureQueue  (.userInteractive) — AVCapture delegate, timestamp extraction, dispatch
-///   writerQueue   (.userInitiated)   — AVAssetWriter append (never blocked by ML)
+/// All work runs on captureQueue: timestamp extraction, writer append, delegate notify.
+/// The AVAssetWriter append is non-blocking (VideoToolbox encodes on its own thread),
+/// so it's safe and fast on the captureQueue. This eliminates:
+///   - writerQueue async dispatch (was retaining pixel buffers in closures)
+///   - buffer pool starvation from queued closures holding buffers
+///   - race conditions between queues
 ///
 /// FOV is locked at hardware maximum (~106° horizontal / ~114° diagonal).
-/// Resolution targets 1920x1080 for stability; accepts 1280x720 if needed.
+/// Resolution targets 1920x1080; accepts 1280x720 if needed.
 final class VideoCaptureService: NSObject {
     let outputURL: URL
     let targetFPS: Int = 30
@@ -36,10 +40,9 @@ final class VideoCaptureService: NSObject {
     private var startNs: UInt64 = 0
     private var recordingStartEpochMs: Double = 0
 
-    /// Receives AVCapture callbacks — highest priority, never blocked.
+    /// Single queue for capture callbacks AND writer appends.
+    /// AVAssetWriter append is non-blocking (just enqueues for HW encode).
     private let captureQueue = DispatchQueue(label: "com.egocapture.capture", qos: .userInteractive)
-    /// Handles AVAssetWriter append — high priority, independent of ML.
-    private let writerQueue = DispatchQueue(label: "com.egocapture.videowriter", qos: .userInitiated)
 
     private(set) var frameIndex: Int = 0
     private(set) var droppedFrames: Int = 0
@@ -63,8 +66,6 @@ final class VideoCaptureService: NSObject {
     private(set) var exposurePolicy: String = "default"
     private(set) var formatDiagnostics: [[String: Any]] = []
 
-    /// Derived pinhole intrinsics: fx, fy (pixels), cx, cy (pixels).
-    /// Computed from horizontal FOV and capture resolution assuming square pixels.
     private(set) var focalLengthFx: Double?
     private(set) var focalLengthFy: Double?
     private(set) var principalPointCx: Double?
@@ -133,13 +134,12 @@ final class VideoCaptureService: NSObject {
         formatDiagnostics = Self.dumpAllFormats(device: camera, targetFPS: targetFPS)
         deviceMaxFov = formatDiagnostics.compactMap { $0["horizontalFovDeg"] as? Double }.max()
 
-        print("[VideoCaptureService] === Context Mode (Production) ===")
+        print("[VideoCaptureService] === IMU-Only Mode ===")
         print("[VideoCaptureService] Device: \(camera.deviceType.rawValue)")
         print("[VideoCaptureService] Ultra-wide: \(usedUltraWide)")
         print("[VideoCaptureService] Horizontal FOV: \(String(format: "%.1f", hFov))° | Diagonal: \(String(format: "%.1f", diagonalFovDeg ?? 0))°")
         print("[VideoCaptureService] Resolution: \(d.width)x\(d.height)")
         print("[VideoCaptureService] Exposure: \(exposurePolicy)")
-        print("[VideoCaptureService] FOV limit reached: \(fovLimitReached) (\(fovLimitReason))")
 
         let input = try AVCaptureDeviceInput(device: camera)
         guard session.canAddInput(input) else { throw CaptureError.cannotAddInput }
@@ -165,9 +165,6 @@ final class VideoCaptureService: NSObject {
         try createAssetWriter(width: actualResolutionWidth, height: actualResolutionHeight)
     }
 
-    /// Balanced exposure: mild negative bias to reduce blur without starving light.
-    /// Previous -0.5 bias was too aggressive (blurMean ~8500-10000).
-    /// Target blurMean ~4000-6000 with -0.25 bias.
     private func configureExposure(_ camera: AVCaptureDevice) {
         if camera.isExposureModeSupported(.continuousAutoExposure) {
             camera.exposureMode = .continuousAutoExposure
@@ -180,8 +177,10 @@ final class VideoCaptureService: NSObject {
         try? FileManager.default.removeItem(at: outputURL)
         recordingStartEpochMs = epochStartMs
         startNs = clock.nowNs()
-        frameIndex = 0; droppedFrames = 0; backpressureEvents = 0
-        videoTimestamps = []; sessionStartTime = nil; writerSessionStarted = false
+        frameIndex = 0; droppedFrames = 0; backpressureEvents = 0; captureQueueDrops = 0
+        videoTimestamps = []
+        videoTimestamps.reserveCapacity(30 * 600)
+        sessionStartTime = nil; writerSessionStarted = false
         previousFrameNs = nil; intervalSumMs = 0; intervalSquaredSumMs = 0; intervalCount = 0
         if assetWriter == nil || assetWriter?.status == .unknown {
             do { try createAssetWriter(width: actualResolutionWidth, height: actualResolutionHeight) } catch {}
@@ -194,7 +193,7 @@ final class VideoCaptureService: NSObject {
         isWriting = false
         captureSession?.stopRunning()
         return await withCheckedContinuation { continuation in
-            writerQueue.async { [weak self] in
+            captureQueue.async { [weak self] in
                 guard let self = self, let w = self.assetWriter else {
                     continuation.resume(returning: self?.outputURL ?? URL(fileURLWithPath: "/")); return
                 }
@@ -204,14 +203,11 @@ final class VideoCaptureService: NSObject {
         }
     }
 
-    // MARK: - Frame Processing (capture callback → writer + delegate)
+    // MARK: - Frame Processing (single-queue: capture + write + notify)
 
-    /// Called on captureQueue. Extracts timestamps, dispatches write, notifies delegate.
-    /// Must remain ultralight — no ML, no JSON, no allocations beyond the timestamp.
-    ///
-    /// Uses the hardware presentation timestamp from CMSampleBuffer (same mach_absolute_time
-    /// clock as CoreMotion) instead of clock.nowNs() callback time. This makes IMU↔video
-    /// sync deterministic — both share the exact same time base with zero offset.
+    /// Runs on captureQueue. Timestamps, writes, notifies — all inline.
+    /// The writer append is non-blocking (VideoToolbox encodes asynchronously).
+    /// The pixel buffer is released when this method returns — no closures retain it.
     private func handleCapturedFrame(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime) {
         guard isWriting else { return }
 
@@ -232,17 +228,34 @@ final class VideoCaptureService: NSObject {
         videoTimestamps.append(VideoTimestamp(
             frameIndex: idx, timestampEpochMs: epochMs, relativeMs: relativeMs,
             timestampNs: frameNs, clock: "mach_absolute_time",
-            presentationTimeSec: CMTimeGetSeconds(timestamp), isEstimated: false
+            presentationTimeSec: ptsSec, isEstimated: false
         ))
 
-        writerQueue.async { [weak self] in
-            self?.appendToWriter(pixelBuffer, timestamp: timestamp)
+        appendToWriter(pixelBuffer, timestamp: timestamp)
+
+        var preview: UIImage? = nil
+        if idx % 8 == 0 {
+            preview = Self.tinyPreview(from: pixelBuffer)
         }
 
-        delegate?.videoCaptureService(self, didOutputPixelBuffer: pixelBuffer, timestamp: timestamp, relativeMs: relativeMs, timestampNs: frameNs, frameIndex: idx)
+        delegate?.videoCaptureService(self, didCaptureFrame: idx, relativeMs: relativeMs, timestampNs: frameNs, preview: preview)
     }
 
-    /// Runs on writerQueue. Appends the pixel buffer to the asset writer.
+    /// 240p preview rendered inline on captureQueue. Takes ~1-2ms.
+    /// No pixel buffer is retained beyond this call.
+    private static let previewContext = CIContext(options: [.cacheIntermediates: false, .useSoftwareRenderer: false])
+
+    private static func tinyPreview(from pb: CVPixelBuffer) -> UIImage? {
+        let ci = CIImage(cvPixelBuffer: pb)
+        let h = Double(CVPixelBufferGetHeight(pb))
+        guard h > 0 else { return nil }
+        let scale = 240.0 / h
+        let scaled = ci.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        guard let cg = previewContext.createCGImage(scaled, from: scaled.extent) else { return nil }
+        return UIImage(cgImage: cg, scale: 1.0, orientation: .up)
+    }
+
+    /// Inline on captureQueue. Checks backpressure BEFORE touching the encoder.
     private func appendToWriter(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime) {
         guard let writer = assetWriter else { droppedFrames += 1; return }
         if !writerSessionStarted {
@@ -253,10 +266,12 @@ final class VideoCaptureService: NSObject {
         }
         if writer.status != .writing { droppedFrames += 1; return }
 
-        if let adaptor = pixelBufferAdaptor, adaptor.assetWriterInput.isReadyForMoreMediaData {
-            if !adaptor.append(pixelBuffer, withPresentationTime: timestamp) { droppedFrames += 1 }
-        } else {
-            droppedFrames += 1; backpressureEvents += 1
+        guard let adaptor = pixelBufferAdaptor else { droppedFrames += 1; return }
+        guard adaptor.assetWriterInput.isReadyForMoreMediaData else {
+            backpressureEvents += 1; droppedFrames += 1; return
+        }
+        if !adaptor.append(pixelBuffer, withPresentationTime: timestamp) {
+            droppedFrames += 1
         }
     }
 
@@ -268,15 +283,26 @@ final class VideoCaptureService: NSObject {
         assetWriter = nil; assetWriterInput = nil; pixelBufferAdaptor = nil
         try? FileManager.default.removeItem(at: outputURL)
         let w = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
+        let compressionProps: [String: Any] = [
+            AVVideoAverageBitRateKey: targetBitrate,
+            AVVideoMaxKeyFrameIntervalKey: gopLength,
+            AVVideoAllowFrameReorderingKey: false,
+            AVVideoProfileLevelKey: AVVideoProfileLevelH264BaselineAutoLevel,
+            AVVideoExpectedSourceFrameRateKey: targetFPS
+        ]
         let settings: [String: Any] = [
-            AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: width, AVVideoHeightKey: height,
-            AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: targetBitrate, AVVideoMaxKeyFrameIntervalKey: gopLength, AVVideoAllowFrameReorderingKey: false]
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: width,
+            AVVideoHeightKey: height,
+            AVVideoCompressionPropertiesKey: compressionProps
         ]
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
         input.expectsMediaDataInRealTime = true
         input.transform = CGAffineTransform.identity
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
-            kCVPixelBufferPixelFormatTypeKey as String: detectedPixelFormat, kCVPixelBufferWidthKey as String: width, kCVPixelBufferHeightKey as String: height
+            kCVPixelBufferPixelFormatTypeKey as String: detectedPixelFormat,
+            kCVPixelBufferWidthKey as String: width,
+            kCVPixelBufferHeightKey as String: height
         ])
         guard w.canAdd(input) else { throw CaptureError.cannotAddWriterInput }
         w.add(input)
@@ -303,7 +329,6 @@ final class VideoCaptureService: NSObject {
         let formatDescription: String
     }
 
-    /// Locked camera selection: ultra-wide at max FOV, 1920x1080 preferred.
     private func selectMaxFovCamera(targetFPS: Int) -> CameraFormatSelection? {
         let uwDiscovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: [.builtInUltraWideCamera],
@@ -372,8 +397,6 @@ final class VideoCaptureService: NSObject {
 
     // MARK: - FOV Helpers
 
-    /// Derive pinhole camera intrinsics from horizontal FOV and resolution.
-    /// Assumes square pixels (fx == fy) and principal point at image center.
     static func deriveIntrinsics(horizontalFovDeg: Double, width: Int, height: Int) -> (fx: Double, fy: Double, cx: Double, cy: Double) {
         guard horizontalFovDeg > 0, width > 0, height > 0 else {
             return (0, 0, Double(width) / 2.0, Double(height) / 2.0)

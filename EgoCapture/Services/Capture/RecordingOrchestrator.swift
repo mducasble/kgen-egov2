@@ -1,8 +1,6 @@
 import Foundation
 import UIKit
-import CoreVideo
 import AVFoundation
-import CoreImage
 
 private let kPipelineVersion = "7.1.0"
 private let kPipelineBuild = "imu-only-deterministic-sync"
@@ -32,10 +30,8 @@ final class RecordingOrchestrator: ObservableObject {
     private var recordingStartEpochMs: Double = 0
     private var durationTimer: Timer?
 
-    /// Dedicated queue for preview rendering — never blocks captureQueue.
-    private let previewQueue = DispatchQueue(label: "com.egocapture.preview", qos: .utility)
-    /// Prevents multiple concurrent preview renders from exhausting the pixel buffer pool.
-    nonisolated(unsafe) private var previewInFlight = false
+    /// Frame counter for throttled UI updates.
+    nonisolated(unsafe) private var lastUIUpdateFrame: Int = 0
 
     // MARK: - Start
 
@@ -370,37 +366,20 @@ final class RecordingOrchestrator: ObservableObject {
         }
     }
 
-    nonisolated private static let sharedCIContext = CIContext(options: [.cacheIntermediates: false])
-
-    /// Renders a downscaled (480p) preview. Runs on previewQueue, never on captureQueue.
-    nonisolated private static func downsampledPreview(from pb: CVPixelBuffer) -> UIImage? {
-        let ci = CIImage(cvPixelBuffer: pb)
-        let srcHeight = Double(CVPixelBufferGetHeight(pb))
-        guard srcHeight > 0 else { return nil }
-        let scale = 480.0 / srcHeight
-        let scaled = ci.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        guard let cg = sharedCIContext.createCGImage(scaled, from: scaled.extent) else { return nil }
-        return UIImage(cgImage: cg, scale: 1.0, orientation: .up)
-    }
 }
 
-// MARK: - Video Frame Delegate (IMU-only: zero-cost on captureQueue)
+// MARK: - Video Frame Delegate (IMU-only: zero-cost)
 
 extension RecordingOrchestrator: VideoCaptureDelegate {
 
-    /// Called from captureQueue (.userInteractive). Returns immediately.
-    /// Preview rendering is dispatched to a dedicated utility queue with
-    /// "latest only" semantics — at most one render in flight at a time.
-    nonisolated func videoCaptureService(_ service: VideoCaptureService, didOutputPixelBuffer pixelBuffer: CVPixelBuffer, timestamp: CMTime, relativeMs: Double, timestampNs: UInt64, frameIndex: Int) {
-        Task { @MainActor [weak self] in self?.frameCount = frameIndex }
-
-        if frameIndex % 6 == 0, !previewInFlight {
-            previewInFlight = true
-            previewQueue.async { [weak self] in
-                let img = Self.downsampledPreview(from: pixelBuffer)
-                self?.previewInFlight = false
-                Task { @MainActor [weak self] in self?.previewImage = img }
-            }
+    /// Called from captureQueue. Preview is a tiny 240p UIImage (already rendered).
+    /// No pixel buffer is retained. UI updates throttled to match preview cadence.
+    nonisolated func videoCaptureService(_ service: VideoCaptureService, didCaptureFrame frameIndex: Int, relativeMs: Double, timestampNs: UInt64, preview: UIImage?) {
+        guard frameIndex - lastUIUpdateFrame >= 8 else { return }
+        lastUIUpdateFrame = frameIndex
+        Task { @MainActor [weak self] in
+            self?.frameCount = frameIndex
+            if let preview { self?.previewImage = preview }
         }
     }
 }
