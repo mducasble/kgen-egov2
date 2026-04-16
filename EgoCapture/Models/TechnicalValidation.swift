@@ -10,7 +10,10 @@ struct TechnicalValidation: Codable {
     let passCriteria: PassCriteria
 
     struct Timing: Codable {
-        let imuToVideoEstimatedOffsetMs: Double?
+        let imuToVideoEstimatedOffsetMs: Double
+        let imuToVideoSyncMethod: String
+        let observedJitterStdDevMs: Double
+        let observedMaxDeltaMs: Double
     }
 
     struct IMU: Codable {

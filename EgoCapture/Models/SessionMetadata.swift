@@ -77,9 +77,12 @@ struct SessionMetadata: Codable {
     }
 
     struct SyncMetrics: Codable {
-        let imuToVideoEstimatedOffsetMs: Double?
+        let imuToVideoEstimatedOffsetMs: Double
         let imuToVideoSyncMethod: String
         let imuToVideoSyncConfidence: String
+        let observedJitterStdDevMs: Double
+        let observedMaxDeltaMs: Double
+        let samplePairsUsed: Int
     }
 
     struct CaptureHealth: Codable {

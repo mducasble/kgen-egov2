@@ -4,8 +4,8 @@ import CoreVideo
 import AVFoundation
 import CoreImage
 
-private let kPipelineVersion = "7.0.0"
-private let kPipelineBuild = "imu-only"
+private let kPipelineVersion = "7.1.0"
+private let kPipelineBuild = "imu-only-deterministic-sync"
 
 @MainActor
 final class RecordingOrchestrator: ObservableObject {
@@ -145,7 +145,7 @@ final class RecordingOrchestrator: ObservableObject {
         var warnings: [String] = []
         if droppedFrames > 5 { warnings.append("droppedFrames=\(droppedFrames) exceeds target of ≤5") }
         if !isLandscape { warnings.append("Video orientation inconsistent with landscape lock.") }
-        if imuVideoSync.confidence == "low" { warnings.append("IMU↔video sync confidence is low.") }
+        if imuVideoSync.observedMaxDeltaMs > 15.0 { warnings.append("IMU↔video jitter exceeded 15ms (max=\(String(format: "%.1f", imuVideoSync.observedMaxDeltaMs))ms).") }
         if !usedUltraWide { warnings.append("Ultra-wide camera not available; fell back to wide.") }
 
         let validation = validateSession(
@@ -259,7 +259,10 @@ final class RecordingOrchestrator: ObservableObject {
             syncMetrics: SessionMetadata.SyncMetrics(
                 imuToVideoEstimatedOffsetMs: imuVideoSync.estimatedOffsetMs,
                 imuToVideoSyncMethod: imuVideoSync.method,
-                imuToVideoSyncConfidence: imuVideoSync.confidence
+                imuToVideoSyncConfidence: imuVideoSync.confidence,
+                observedJitterStdDevMs: imuVideoSync.observedJitterStdDevMs,
+                observedMaxDeltaMs: imuVideoSync.observedMaxDeltaMs,
+                samplePairsUsed: imuVideoSync.samplePairsUsed
             ),
             captureHealth: SessionMetadata.CaptureHealth(
                 videoBackpressureEvents: videoCaptureService?.backpressureEvents ?? 0,
@@ -282,7 +285,10 @@ final class RecordingOrchestrator: ObservableObject {
         let techVal = TechnicalValidation(
             sessionId: sessionId,
             timing: TechnicalValidation.Timing(
-                imuToVideoEstimatedOffsetMs: imuVideoSync.estimatedOffsetMs
+                imuToVideoEstimatedOffsetMs: imuVideoSync.estimatedOffsetMs,
+                imuToVideoSyncMethod: imuVideoSync.method,
+                observedJitterStdDevMs: imuVideoSync.observedJitterStdDevMs,
+                observedMaxDeltaMs: imuVideoSync.observedMaxDeltaMs
             ),
             imu: TechnicalValidation.IMU(
                 sampleRateHz: imuCaptureService?.actualSampleRateHz ?? 0,
@@ -303,7 +309,7 @@ final class RecordingOrchestrator: ObservableObject {
             passCriteria: TechnicalValidation.PassCriteria(
                 videoStable: avgFPS >= 25 && droppedFrames <= 5,
                 imuStable: (imuCaptureService?.actualSampleRateHz ?? 0) >= 90 && (imuCaptureService?.sampleIntervalStdDevMs ?? 999) < 2,
-                syncAcceptable: imuVideoSync.confidence != "low",
+                syncAcceptable: imuVideoSync.observedMaxDeltaMs < 15.0,
                 calibrationAcceptable: true
             )
         )

@@ -208,11 +208,16 @@ final class VideoCaptureService: NSObject {
 
     /// Called on captureQueue. Extracts timestamps, dispatches write, notifies delegate.
     /// Must remain ultralight — no ML, no JSON, no allocations beyond the timestamp.
+    ///
+    /// Uses the hardware presentation timestamp from CMSampleBuffer (same mach_absolute_time
+    /// clock as CoreMotion) instead of clock.nowNs() callback time. This makes IMU↔video
+    /// sync deterministic — both share the exact same time base with zero offset.
     private func handleCapturedFrame(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime) {
         guard isWriting else { return }
 
         let idx = frameIndex; frameIndex += 1
-        let frameNs = clock.nowNs()
+        let ptsSec = CMTimeGetSeconds(timestamp)
+        let frameNs = clock.fromPresentationTimestamp(ptsSec)
         let relativeMs = clock.toRelativeMs(frameNs, from: startNs)
         let epochMs = clock.toEpochMs(frameNs)
 

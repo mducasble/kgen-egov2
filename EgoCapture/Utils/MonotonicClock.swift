@@ -71,4 +71,11 @@ final class MonotonicClock {
     func fromCoreMotionTimestamp(_ cmTimestamp: TimeInterval) -> UInt64 {
         return UInt64(cmTimestamp * 1_000_000_000)
     }
+
+    /// Convert an AVCapture presentation timestamp (boot-relative seconds from CMTime)
+    /// to our monotonic nanoseconds.
+    /// AVCapture's master clock is CMClockGetHostTimeClock (= mach_absolute_time).
+    func fromPresentationTimestamp(_ ptsSec: Double) -> UInt64 {
+        return UInt64(ptsSec * 1_000_000_000)
+    }
 }
