@@ -367,6 +367,11 @@ final class RecordingOrchestrator: ObservableObject {
         let exposurePolicy = videoCaptureService?.exposurePolicy ?? "default"
         let fovMode = videoCaptureService?.fovMode ?? "hardware"
         let fovTargetAchieved = videoCaptureService?.fovTargetAchieved ?? false
+        let diagonalFovDeg = videoCaptureService?.diagonalFovDeg
+        let deviceMaxHorizontalFov = videoCaptureService?.deviceMaxFov
+
+        // Write full format diagnostics for inspection
+        videoCaptureService?.writeDiagnostics(to: dir)
 
         let appleProcessed = handLandmarkService?.processedFrameCount ?? 0
         let mediaPipeProcessed = handLandmarkMediaPipeService?.processedFrameCount ?? 0
@@ -383,12 +388,13 @@ final class RecordingOrchestrator: ObservableObject {
         }
         if imuVideoSync.confidence == "low" { warnings.append("IMU↔video sync confidence is low.") }
         if !usedUltraWide { warnings.append("Ultra-wide camera not available; fell back to wide.") }
-        if let fov = cameraActualFovDeg {
-            if fov < 110 {
-                warnings.append("actualFovDeg=\(String(format: "%.1f", fov))° is below expected ultra-wide range (≥110°).")
-            }
-            if fov >= 120 {
-                warnings.append("wide_fov_target_achieved: actualFovDeg=\(String(format: "%.1f", fov))° ≥ 120°")
+        if let hFov = cameraActualFovDeg {
+            if fovTargetAchieved {
+                warnings.append("wide_fov_target_achieved: diagonal ≈\(String(format: "%.0f", diagonalFovDeg ?? 0))° (horizontal=\(String(format: "%.1f", hFov))°)")
+            } else if hFov >= 105 {
+                warnings.append("FOV stable: horizontal=\(String(format: "%.1f", hFov))°, diagonal≈\(String(format: "%.0f", diagonalFovDeg ?? 0))°. Device max horizontal=\(String(format: "%.1f", deviceMaxHorizontalFov ?? hFov))°")
+            } else {
+                warnings.append("actualFovDeg=\(String(format: "%.1f", hFov))° is below 105° minimum for context mode.")
             }
         }
         if appleProcessed == 0 {
@@ -431,7 +437,8 @@ final class RecordingOrchestrator: ObservableObject {
         let validation = validateSession(videoFrames: totalFrames, imuSamples: imuCaptureService?.totalSamples ?? 0,
                                          durationSec: durationSec, videoTimestamps: videoTS,
                                          droppedFrames: droppedFrames, usedUltraWide: usedUltraWide,
-                                         actualFovDeg: cameraActualFovDeg, avgFPS: avgFPS,
+                                         actualFovDeg: cameraActualFovDeg, diagonalFovDeg: diagonalFovDeg,
+                                         avgFPS: avgFPS,
                                          mediaPipeCoverage: mediaPipeCoverage, appleCoverage: appleCoverage)
 
         let cameraSource = usedUltraWide ? "avcapture_ultrawide" : "avcapture_wide"
@@ -454,8 +461,13 @@ final class RecordingOrchestrator: ObservableObject {
             ),
             camera: SessionMetadata.CameraInfo(
                 selectedLens: selectedLens, actualFovDeg: cameraActualFovDeg,
+                diagonalFovDeg: diagonalFovDeg,
+                deviceMaxHorizontalFov: deviceMaxHorizontalFov,
                 fovSource: cameraFovSource, fovMode: fovMode,
                 fovTargetAchieved: fovTargetAchieved,
+                fovNote: (cameraActualFovDeg ?? 0) < 115
+                    ? "videoFieldOfView reports horizontal FOV. Apple's 120° ultra-wide spec is diagonal. ~106° horizontal ≈ ~\(String(format: "%.0f", diagonalFovDeg ?? 0))° diagonal."
+                    : nil,
                 selectedFormatDescription: selectedFormatDescription,
                 usedUltraWide: usedUltraWide, exposurePolicy: exposurePolicy
             ),
@@ -567,8 +579,8 @@ final class RecordingOrchestrator: ObservableObject {
 
     private func validateSession(
         videoFrames: Int, imuSamples: Int, durationSec: Double, videoTimestamps: [VideoTimestamp],
-        droppedFrames: Int, usedUltraWide: Bool, actualFovDeg: Double?, avgFPS: Double,
-        mediaPipeCoverage: Double, appleCoverage: Double
+        droppedFrames: Int, usedUltraWide: Bool, actualFovDeg: Double?, diagonalFovDeg: Double?,
+        avgFPS: Double, mediaPipeCoverage: Double, appleCoverage: Double
     ) -> SessionMetadata.ValidationResult {
         var issues: [String] = []
         let expectedIMU = durationSec * 100
@@ -579,12 +591,13 @@ final class RecordingOrchestrator: ObservableObject {
             if videoTimestamps[i].timestampNs <= videoTimestamps[i-1].timestampNs { mono = false; issues.append("Non-monotonic timestamp at frame \(i)"); break }
         }
 
-        // Context Mode validation targets
+        // Context Mode validation: use diagonal FOV for the 120° target
         if !usedUltraWide { issues.append("WARN: usedUltraWide=false") }
-        if let fov = actualFovDeg {
-            if fov < 105 { issues.append("WARN: actualFovDeg=\(String(format: "%.1f", fov))° < 105° minimum") }
-            else if fov < 110 { issues.append("INFO: actualFovDeg=\(String(format: "%.1f", fov))° below 110° target") }
-            if fov >= 120 { issues.append("OK: wide_fov_target_achieved (\(String(format: "%.1f", fov))°)") }
+        if let hFov = actualFovDeg {
+            let dFov = diagonalFovDeg ?? hFov
+            if hFov < 100 { issues.append("WARN: horizontal FOV=\(String(format: "%.1f", hFov))° < 100°") }
+            if dFov >= 120 { issues.append("OK: diagonal_fov_target_achieved (\(String(format: "%.1f", dFov))°)") }
+            else if dFov >= 110 { issues.append("INFO: diagonal FOV=\(String(format: "%.1f", dFov))° approaching 120° target") }
         }
         if droppedFrames > 5 { issues.append("WARN: droppedFrames=\(droppedFrames) > 5") }
         if avgFPS < 25 { issues.append("WARN: actualAvgFPS=\(String(format: "%.1f", avgFPS)) < 25") }

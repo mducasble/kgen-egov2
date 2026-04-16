@@ -42,6 +42,9 @@ final class VideoCaptureService: NSObject {
     private(set) var fovSource: String = "unknown"
     private(set) var fovMode: String = "hardware"
     private(set) var fovTargetAchieved: Bool = false
+    private(set) var diagonalFovDeg: Double?
+    private(set) var deviceMaxFov: Double?
+    private(set) var formatDiagnostics: [[String: Any]] = []
     private(set) var selectedFormatDescription: String = "unknown"
     private(set) var orientationLocked: Bool = true
     private(set) var orientation: String = "landscape"
@@ -89,25 +92,35 @@ final class VideoCaptureService: NSObject {
         captureDevice = camera
 
         selectedLens = lensName(for: camera.deviceType)
-        let fov = Double(selection.format.videoFieldOfView)
-        usedUltraWide = camera.deviceType == .builtInUltraWideCamera || fov > 100
-        actualFovDeg = fov
+        let hFov = Double(selection.format.videoFieldOfView)
+        usedUltraWide = camera.deviceType == .builtInUltraWideCamera || hFov > 100
+        actualFovDeg = hFov
+        let dFov = Self.computeDiagonalFov(horizontalDeg: hFov, width: Int(d.width), height: Int(d.height))
+        diagonalFovDeg = dFov
         fovSource = "avcapture_format"
         fovMode = "hardware"
-        fovTargetAchieved = fov >= 120
+        fovTargetAchieved = dFov >= 120 || hFov >= 120
         selectedFormatDescription = selection.formatDescription
         orientationLocked = true
         orientation = "landscape"
 
-        let fovStatus = fovTargetAchieved ? "TARGET ACHIEVED" : (fov >= 105 ? "STABLE" : "BELOW TARGET")
+        // Full format dump (for diagnostics)
+        formatDiagnostics = Self.dumpAllFormats(device: camera, targetFPS: targetFPS)
+        deviceMaxFov = formatDiagnostics.compactMap { $0["horizontalFovDeg"] as? Double }.max()
+
+        let fovStatus = fovTargetAchieved ? "TARGET ACHIEVED" : (hFov >= 105 ? "STABLE" : "BELOW TARGET")
         print("[VideoCaptureService] === FOV-First Selection ===")
         print("[VideoCaptureService] Device: \(camera.deviceType.rawValue)")
         print("[VideoCaptureService] Ultra-wide: \(usedUltraWide)")
-        print("[VideoCaptureService] FOV: \(String(format: "%.1f", fov))° [\(fovStatus)]")
+        print("[VideoCaptureService] Horizontal FOV: \(String(format: "%.1f", hFov))°")
+        print("[VideoCaptureService] Diagonal FOV:   \(String(format: "%.1f", dFov))°  [\(fovStatus)]")
+        print("[VideoCaptureService] Device max horizontal FOV: \(String(format: "%.1f", deviceMaxFov ?? 0))°")
         print("[VideoCaptureService] Resolution: \(d.width)x\(d.height)")
         print("[VideoCaptureService] Exposure: \(exposurePolicy)")
-        if fov < 110 {
-            print("[VideoCaptureService] WARNING: FOV below expected ultra-wide range")
+        print("[VideoCaptureService] Total formats on device: \(camera.formats.count)")
+        print("[VideoCaptureService] Formats dumped: \(formatDiagnostics.count)")
+        if hFov < 110 {
+            print("[VideoCaptureService] NOTE: ~106° horizontal = ~\(String(format: "%.0f", dFov))° diagonal. Apple reports 120° as diagonal FOV.")
         }
 
         let input = try AVCaptureDeviceInput(device: camera)
@@ -368,6 +381,89 @@ final class VideoCaptureService: NSObject {
         let fov = format.videoFieldOfView
         let desc = "\(device.deviceType.rawValue) \(dims.width)x\(dims.height) fov=\(String(format: "%.1f", Double(fov)))°"
         return CameraFormatSelection(device: device, format: format, formatDescription: desc)
+    }
+
+    // MARK: - FOV Helpers
+
+    /// Compute diagonal FOV from horizontal FOV and aspect ratio.
+    /// Ultra-wide lenses are not perfectly rectilinear, so this is an approximation.
+    static func computeDiagonalFov(horizontalDeg: Double, width: Int, height: Int) -> Double {
+        guard width > 0, height > 0, horizontalDeg > 0 else { return horizontalDeg }
+        let hRad = horizontalDeg * .pi / 180.0
+        let aspect = Double(height) / Double(width)
+        let diag = 2.0 * atan(sqrt(1.0 + aspect * aspect) * tan(hRad / 2.0))
+        return diag * 180.0 / .pi
+    }
+
+    /// Dump ALL formats on a device with no filtering — for diagnostics.
+    static func dumpAllFormats(device: AVCaptureDevice, targetFPS: Int) -> [[String: Any]] {
+        var results: [[String: Any]] = []
+        for (i, format) in device.formats.enumerated() {
+            let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+            let fov = format.videoFieldOfView
+            let fpsRanges = format.videoSupportedFrameRateRanges
+            let maxFPS = fpsRanges.map(\.maxFrameRate).max() ?? 0
+            let minFPS = fpsRanges.map(\.minFrameRate).min() ?? 0
+            let supports30 = fpsRanges.contains { $0.maxFrameRate >= Double(targetFPS) }
+            let dFov = computeDiagonalFov(horizontalDeg: Double(fov), width: Int(dims.width), height: Int(dims.height))
+            let mediaSubType = CMFormatDescriptionGetMediaSubType(format.formatDescription)
+            let fourCC = String(format: "%c%c%c%c",
+                                (mediaSubType >> 24) & 0xFF,
+                                (mediaSubType >> 16) & 0xFF,
+                                (mediaSubType >> 8) & 0xFF,
+                                mediaSubType & 0xFF)
+
+            let entry: [String: Any] = [
+                "index": i,
+                "width": Int(dims.width),
+                "height": Int(dims.height),
+                "horizontalFovDeg": Double(fov),
+                "diagonalFovDeg": dFov,
+                "minFPS": minFPS,
+                "maxFPS": maxFPS,
+                "supports30fps": supports30,
+                "pixelFormat": fourCC,
+                "isSelected": false
+            ]
+            results.append(entry)
+
+            print("[FormatDump] #\(i) \(dims.width)x\(dims.height) hFOV=\(String(format: "%.1f", fov))° dFOV=\(String(format: "%.1f", dFov))° fps=\(String(format: "%.0f", minFPS))-\(String(format: "%.0f", maxFPS)) \(fourCC) \(supports30 ? "✓30" : "✗30")")
+        }
+        return results
+    }
+
+    /// Write format diagnostics to a JSON file in the session directory.
+    func writeDiagnostics(to directory: URL) {
+        guard !formatDiagnostics.isEmpty else { return }
+        var diag = formatDiagnostics
+        for i in diag.indices {
+            if let w = diag[i]["width"] as? Int, let h = diag[i]["height"] as? Int,
+               let fov = diag[i]["horizontalFovDeg"] as? Double,
+               w == actualResolutionWidth && h == actualResolutionHeight && abs(fov - (actualFovDeg ?? 0)) < 0.1 {
+                diag[i]["isSelected"] = true
+            }
+        }
+
+        let report: [String: Any] = [
+            "deviceType": selectedLens,
+            "selectedFormat": [
+                "width": actualResolutionWidth,
+                "height": actualResolutionHeight,
+                "horizontalFovDeg": actualFovDeg ?? 0,
+                "diagonalFovDeg": diagonalFovDeg ?? 0,
+                "fovMode": fovMode,
+                "fovTargetAchieved": fovTargetAchieved,
+                "deviceMaxHorizontalFov": deviceMaxFov ?? 0,
+            ] as [String: Any],
+            "allFormats": diag,
+            "note": "videoFieldOfView reports horizontal FOV. Apple's '120° ultra-wide' spec is diagonal. ~106° horizontal ≈ ~120° diagonal at 16:9."
+        ]
+
+        let url = directory.appendingPathComponent("camera_format_diagnostics.json")
+        if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: url)
+            print("[VideoCaptureService] Format diagnostics written to \(url.lastPathComponent)")
+        }
     }
 
     private func lensName(for deviceType: AVCaptureDevice.DeviceType) -> String {

@@ -43,9 +43,12 @@ struct SessionMetadata: Codable {
     struct CameraInfo: Codable {
         let selectedLens: String
         let actualFovDeg: Double?
+        let diagonalFovDeg: Double?
+        let deviceMaxHorizontalFov: Double?
         let fovSource: String
         let fovMode: String?
         let fovTargetAchieved: Bool?
+        let fovNote: String?
         let selectedFormatDescription: String
         let usedUltraWide: Bool?
         let exposurePolicy: String?
