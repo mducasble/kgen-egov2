@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-/// Complete session metadata — production audit log.
+/// Complete session metadata — production audit log (IMU-only mode).
 struct SessionMetadata: Codable {
     let sessionId: String
     let startTimeEpochMs: Double
@@ -12,23 +12,17 @@ struct SessionMetadata: Codable {
     let capture: CaptureInfo
     let camera: CameraInfo
     let captureProfile: CaptureProfile
-    let contextCapabilities: ContextCapabilities?
-    let contextTracking: ContextTracking?
-    let semanticArtifacts: SemanticArtifactInfo
+    let signalConfiguration: SignalConfiguration
     let imuMetrics: IMUMetrics
     let videoMetrics: VideoMetrics
     let syncMetrics: SyncMetrics
-    let handTrackingComparison: HandTrackingComparison?
-    let fusedArtifacts: FusedArtifacts
     let captureHealth: CaptureHealth
     let cameraIntrinsics: CameraIntrinsics?
     let cameraExtrinsics: CameraExtrinsics?
     let specCompliance: SpecCompliance?
     let coordinateSystem: CoordinateSystem
     let pipeline: PipelineInfo
-    let performance: PerformanceMetrics?
     let validation: ValidationResult
-    let qcSummary: QCSummary?
     let warnings: [String]
 
     struct EnvironmentInfo: Codable {
@@ -65,59 +59,12 @@ struct SessionMetadata: Codable {
         let depthType: String
         let cameraSource: String
     }
-    struct ContextCapabilities: Codable {
-        let mode: String
-        let fovHorizontalDeg: Double
-        let fovDiagonalDeg: Double
-        let fovTargetDeg: Double
-        let fovLimitReached: Bool
-        let trackingQuality: String
-        let worldTracking: Bool
-    }
-    struct ContextTracking: Codable {
-        let primaryHandTracker: String
-        let trackingPriority: String
-        let fallbackEnabled: Bool
-        let fallbackTracker: String?
-        let bestOfSelectionEnabled: Bool
-        let mediaPipeMinDetectionConfidence: Double
-        let mediaPipeMinTrackingConfidence: Double
-        let mediaPipeProcessingFPS: Int
-    }
-    struct SemanticArtifactInfo: Codable {
-        let hasHandLandmarks: Bool; let handLandmarkSource: String
-        let hasHandPose: Bool; let hasFacePresence: Bool; let hasFrameQcMetrics: Bool
-        let handLandmarksAre3D: Bool
-        let handLandmarksZType: String
-    }
 
-    struct HandTrackingComparison: Codable {
-        let appleVisionCoveragePercent: Double?
-        let mediaPipeCoveragePercent: Double?
-        let appleVisionFrameCount: Int?
-        let mediaPipeFrameCount: Int?
-        let appleVisionAverageHandsPerFrame: Double?
-        let mediaPipeAverageHandsPerFrame: Double?
-        let appleVisionAverageConfidence: Double?
-        let mediaPipeAverageConfidence: Double?
-        let coverageWinner: String
-        let fallbackEnabled: Bool
-        let bestOfFrames: BestOfStats?
-        let notes: [String]
-    }
-
-    struct BestOfStats: Codable {
-        let totalFrames: Int
-        let mediaPipeSelected: Int
-        let appleVisionSelected: Int
-        let noneSelected: Int
-    }
-
-    struct FusedArtifacts: Codable {
-        let hasFusedHandPose: Bool
-        let fusedDepthType: String
-        let fusionMethod: String
-        let isMetric3D: Bool
+    struct SignalConfiguration: Codable {
+        let primarySignal: String
+        let poseIncluded: Bool
+        let imuIncluded: Bool
+        let handTrackingIncluded: Bool
     }
 
     struct IMUMetrics: Codable {
@@ -199,18 +146,6 @@ struct SessionMetadata: Codable {
     struct PipelineInfo: Codable {
         let version: String; let build: String; let captureMode: String
         let threadModel: String; let timestampSource: String
-    }
-    struct PerformanceMetrics: Codable {
-        let captureQueueDrops: Int
-        let processingFramesSubmitted: Int
-        let processingFramesSkipped: Int
-        let processingFramesProcessed: Int
-        let processingFramesReused: Int
-        let appleVisionFallbackRuns: Int
-        let mediaPipeRuns: Int
-        let mediaPipeTargetFPS: Double
-        let appleVisionMaxFPS: Double
-        let schedulerPolicy: String
     }
     struct ValidationResult: Codable {
         let frameCountConsistent: Bool; let imuCoveragePercent: Double
