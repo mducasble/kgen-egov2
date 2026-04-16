@@ -23,6 +23,7 @@ struct SessionMetadata: Codable {
     let captureHealth: CaptureHealth
     let coordinateSystem: CoordinateSystem
     let pipeline: PipelineInfo
+    let performance: PerformanceMetrics?
     let validation: ValidationResult
     let qcSummary: QCSummary?
     let warnings: [String]
@@ -148,6 +149,18 @@ struct SessionMetadata: Codable {
     struct PipelineInfo: Codable {
         let version: String; let build: String; let captureMode: String
         let threadModel: String; let timestampSource: String
+    }
+    struct PerformanceMetrics: Codable {
+        let captureQueueDrops: Int
+        let processingFramesSubmitted: Int
+        let processingFramesSkipped: Int
+        let processingFramesProcessed: Int
+        let processingFramesReused: Int
+        let appleVisionFallbackRuns: Int
+        let mediaPipeRuns: Int
+        let mediaPipeTargetFPS: Double
+        let appleVisionMaxFPS: Double
+        let schedulerPolicy: String
     }
     struct ValidationResult: Codable {
         let frameCountConsistent: Bool; let imuCoveragePercent: Double

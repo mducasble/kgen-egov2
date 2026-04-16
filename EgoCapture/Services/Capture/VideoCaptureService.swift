@@ -4,10 +4,17 @@ import UIKit
 import CoreVideo
 
 protocol VideoCaptureDelegate: AnyObject {
-    func videoCaptureService(_ service: VideoCaptureService, didOutputPixelBuffer pixelBuffer: CVPixelBuffer, relativeMs: Double, timestampNs: UInt64, frameIndex: Int)
+    /// Called from captureQueue (.userInteractive). Must return immediately.
+    /// The pixelBuffer is valid only for the duration of this call unless retained.
+    func videoCaptureService(_ service: VideoCaptureService, didOutputPixelBuffer pixelBuffer: CVPixelBuffer, timestamp: CMTime, relativeMs: Double, timestampNs: UInt64, frameIndex: Int)
 }
 
-/// Context Mode production video capture.
+/// Context Mode production video capture with separated queue architecture.
+///
+/// Queue model:
+///   captureQueue  (.userInteractive) — AVCapture delegate, timestamp extraction, dispatch
+///   writerQueue   (.userInitiated)   — AVAssetWriter append (never blocked by ML)
+///
 /// FOV is locked at hardware maximum (~106° horizontal / ~114° diagonal).
 /// Resolution targets 1920x1080 for stability; accepts 1280x720 if needed.
 final class VideoCaptureService: NSObject {
@@ -29,11 +36,15 @@ final class VideoCaptureService: NSObject {
     private var startNs: UInt64 = 0
     private var recordingStartEpochMs: Double = 0
 
-    private let writerQueue = DispatchQueue(label: "com.egocapture.videowriter", qos: .userInteractive)
+    /// Receives AVCapture callbacks — highest priority, never blocked.
+    private let captureQueue = DispatchQueue(label: "com.egocapture.capture", qos: .userInteractive)
+    /// Handles AVAssetWriter append — high priority, independent of ML.
+    private let writerQueue = DispatchQueue(label: "com.egocapture.videowriter", qos: .userInitiated)
 
     private(set) var frameIndex: Int = 0
     private(set) var droppedFrames: Int = 0
     private(set) var backpressureEvents: Int = 0
+    private(set) var captureQueueDrops: Int = 0
     private(set) var videoTimestamps: [VideoTimestamp] = []
     private(set) var actualResolutionWidth: Int = 1920
     private(set) var actualResolutionHeight: Int = 1080
@@ -123,7 +134,7 @@ final class VideoCaptureService: NSObject {
         let output = AVCaptureVideoDataOutput()
         output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         output.alwaysDiscardsLateVideoFrames = true
-        output.setSampleBufferDelegate(self, queue: writerQueue)
+        output.setSampleBufferDelegate(self, queue: captureQueue)
         guard session.canAddOutput(output) else { throw CaptureError.cannotAddOutput }
         session.addOutput(output)
 
@@ -179,20 +190,15 @@ final class VideoCaptureService: NSObject {
         }
     }
 
-    // MARK: - Frame Processing
+    // MARK: - Frame Processing (capture callback → writer + delegate)
 
-    private func processPixelBuffer(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime, sourceTimestampNs: UInt64? = nil) {
-        guard let writer = assetWriter else { droppedFrames += 1; return }
-        if !writerSessionStarted {
-            sessionStartTime = timestamp
-            if writer.status == .unknown { writer.startWriting() }
-            if writer.status == .writing { writer.startSession(atSourceTime: timestamp); writerSessionStarted = true }
-            else { droppedFrames += 1; return }
-        }
-        if writer.status != .writing { droppedFrames += 1; return }
+    /// Called on captureQueue. Extracts timestamps, dispatches write, notifies delegate.
+    /// Must remain ultralight — no ML, no JSON, no allocations beyond the timestamp.
+    private func handleCapturedFrame(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime) {
+        guard isWriting else { return }
 
         let idx = frameIndex; frameIndex += 1
-        let frameNs = sourceTimestampNs ?? clock.nowNs()
+        let frameNs = clock.nowNs()
         let relativeMs = clock.toRelativeMs(frameNs, from: startNs)
         let epochMs = clock.toEpochMs(frameNs)
 
@@ -210,13 +216,31 @@ final class VideoCaptureService: NSObject {
             presentationTimeSec: CMTimeGetSeconds(timestamp), isEstimated: false
         ))
 
+        CVPixelBufferRetain(pixelBuffer)
+        writerQueue.async { [weak self] in
+            self?.appendToWriter(pixelBuffer, timestamp: timestamp)
+            CVPixelBufferRelease(pixelBuffer)
+        }
+
+        delegate?.videoCaptureService(self, didOutputPixelBuffer: pixelBuffer, timestamp: timestamp, relativeMs: relativeMs, timestampNs: frameNs, frameIndex: idx)
+    }
+
+    /// Runs on writerQueue. Appends the pixel buffer to the asset writer.
+    private func appendToWriter(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime) {
+        guard let writer = assetWriter else { droppedFrames += 1; return }
+        if !writerSessionStarted {
+            sessionStartTime = timestamp
+            if writer.status == .unknown { writer.startWriting() }
+            if writer.status == .writing { writer.startSession(atSourceTime: timestamp); writerSessionStarted = true }
+            else { droppedFrames += 1; return }
+        }
+        if writer.status != .writing { droppedFrames += 1; return }
+
         if let adaptor = pixelBufferAdaptor, adaptor.assetWriterInput.isReadyForMoreMediaData {
             if !adaptor.append(pixelBuffer, withPresentationTime: timestamp) { droppedFrames += 1 }
         } else {
             droppedFrames += 1; backpressureEvents += 1
         }
-
-        delegate?.videoCaptureService(self, didOutputPixelBuffer: pixelBuffer, relativeMs: relativeMs, timestampNs: frameNs, frameIndex: idx)
     }
 
     // MARK: - Asset Writer
@@ -400,7 +424,9 @@ final class VideoCaptureService: NSObject {
 extension VideoCaptureService: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        processPixelBuffer(pb, timestamp: CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
+        handleCapturedFrame(pb, timestamp: CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
     }
-    func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) { droppedFrames += 1 }
+    func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        captureQueueDrops += 1; droppedFrames += 1
+    }
 }

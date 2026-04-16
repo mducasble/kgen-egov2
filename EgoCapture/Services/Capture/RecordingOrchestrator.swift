@@ -4,43 +4,28 @@ import CoreVideo
 import AVFoundation
 import CoreImage
 
-private let kPipelineVersion = "5.0.0"
-private let kPipelineBuild = "context-mode-production"
+private let kPipelineVersion = "6.0.0"
+private let kPipelineBuild = "scheduler-architecture"
 
-/// MediaPipe processing stride: run inference every Nth video frame.
-/// At 30fps video, stride=2 → ~15fps MediaPipe, stride=3 → ~10fps.
-/// The last result is reused for skipped frames during best-of fusion.
-private let kMediaPipeStride = 2
+/// Target MediaPipe inference rate — decoupled from video FPS.
+private let kMediaPipeTargetFPS: Double = 12.0
 
+/// Apple Vision fallback: max frequency to avoid double inference overhead.
+/// Only triggers when MediaPipe has no recent hands.
+private let kAppleVisionMaxFPS: Double = 10.0
+
+/// Face/QC stride relative to Apple Vision: run every Nth AV frame.
+private let kFaceQCStride: Int = 3
+
+/// Holds weak references to all vision services.
+/// Passed between queues; services themselves are thread-safe.
 fileprivate final class VisionCaptureBridge: @unchecked Sendable {
-    let visionStride: Int
-    let mediaPipeStride: Int
     weak var handLandmark: HandLandmarkService?
     weak var handPose: HandPoseDerivationService?
     weak var handLandmarkMP: HandLandmarkService?
     weak var handPoseMP: HandPoseDerivationService?
     weak var facePresence: FacePresenceService?
     weak var frameQC: FrameQCService?
-
-    init(
-        visionStride: Int,
-        mediaPipeStride: Int,
-        handLandmark: HandLandmarkService?,
-        handPose: HandPoseDerivationService?,
-        handLandmarkMP: HandLandmarkService?,
-        handPoseMP: HandPoseDerivationService?,
-        facePresence: FacePresenceService?,
-        frameQC: FrameQCService?
-    ) {
-        self.visionStride = visionStride
-        self.mediaPipeStride = mediaPipeStride
-        self.handLandmark = handLandmark
-        self.handPose = handPose
-        self.handLandmarkMP = handLandmarkMP
-        self.handPoseMP = handPoseMP
-        self.facePresence = facePresence
-        self.frameQC = frameQC
-    }
 }
 
 @MainActor
@@ -116,9 +101,25 @@ final class RecordingOrchestrator: ObservableObject {
     private var recordingStartEpochMs: Double = 0
     private var durationTimer: Timer?
 
-    private let visionQueue = DispatchQueue(label: "com.egocapture.vision", qos: .userInitiated)
-    private let mediaPipeQueue = DispatchQueue(label: "com.egocapture.vision.mediapipe", qos: .utility)
-    private let visionStride = 3
+    // MARK: - Scheduler Architecture
+
+    /// processingQueue (.utility) — all ML inference runs here, never on capture.
+    private let processingQueue = DispatchQueue(label: "com.egocapture.processing", qos: .utility)
+
+    /// Rate limiters: time-based gating for ML processing FPS.
+    private let mediaPipeRateLimiter = ProcessingRateLimiter(targetProcessingFPS: kMediaPipeTargetFPS)
+    private let appleVisionRateLimiter = ProcessingRateLimiter(targetProcessingFPS: kAppleVisionMaxFPS)
+
+    /// Latest-frame-wins scheduler: prevents ML backlog from building up.
+    nonisolated(unsafe) private var mediaPipeScheduler: LatestFrameScheduler?
+
+    /// Cached MediaPipe result for temporal reuse on skipped frames.
+    private let cachedMPResult = CachedHandResult(maxAgeMs: 200)
+
+    /// Performance counters (read at finalization for metadata).
+    nonisolated(unsafe) private var appleVisionFallbackRuns: Int = 0
+    nonisolated(unsafe) private var mediaPipeActualRuns: Int = 0
+    nonisolated(unsafe) private var appleVisionFrameCounter: Int = 0
 
     nonisolated(unsafe) private var visionCaptureBridge: VisionCaptureBridge?
 
@@ -177,16 +178,23 @@ final class RecordingOrchestrator: ObservableObject {
             try qc.start(outputURL: dir.appendingPathComponent("frame_qc_metrics.jsonl"), epochStartMs: recordingStartEpochMs)
             frameQCService = qc
 
-            visionCaptureBridge = VisionCaptureBridge(
-                visionStride: visionStride,
-                mediaPipeStride: kMediaPipeStride,
-                handLandmark: handLandmarkService,
-                handPose: handPoseService,
-                handLandmarkMP: handLandmarkMediaPipeService,
-                handPoseMP: handPoseMediaPipeService,
-                facePresence: facePresenceService,
-                frameQC: frameQCService
-            )
+            let bridge = VisionCaptureBridge()
+            bridge.handLandmark = handLandmarkService
+            bridge.handPose = handPoseService
+            bridge.handLandmarkMP = handLandmarkMediaPipeService
+            bridge.handPoseMP = handPoseMediaPipeService
+            bridge.facePresence = facePresenceService
+            bridge.frameQC = frameQCService
+            visionCaptureBridge = bridge
+
+            mediaPipeRateLimiter.reset()
+            appleVisionRateLimiter.reset()
+            cachedMPResult.reset()
+            appleVisionFallbackRuns = 0
+            mediaPipeActualRuns = 0
+            appleVisionFrameCounter = 0
+            let scheduler = LatestFrameScheduler(queue: processingQueue)
+            mediaPipeScheduler = scheduler
 
             let video = VideoCaptureService(outputURL: dir.appendingPathComponent("video.mp4"))
             video.delegate = self; videoCaptureService = video
@@ -347,6 +355,7 @@ final class RecordingOrchestrator: ObservableObject {
 
         let appleProcessed = handLandmarkService?.processedFrameCount ?? 0
         let mediaPipeProcessed = handLandmarkMediaPipeService?.processedFrameCount ?? 0
+        let schedulerStats = mediaPipeScheduler?.stats ?? (0, 0, 0)
 
         // Warnings
         var warnings: [String] = []
@@ -396,7 +405,20 @@ final class RecordingOrchestrator: ObservableObject {
         )
 
         let cameraSource = usedUltraWide ? "avcapture_ultrawide" : "avcapture_wide"
-        let mpEffectiveFPS = 30 / kMediaPipeStride
+        let mpEffectiveFPS = Int(kMediaPipeTargetFPS)
+
+        let performanceMetrics = SessionMetadata.PerformanceMetrics(
+            captureQueueDrops: videoCaptureService?.captureQueueDrops ?? 0,
+            processingFramesSubmitted: schedulerStats.submitted,
+            processingFramesSkipped: schedulerStats.skipped,
+            processingFramesProcessed: schedulerStats.processed,
+            processingFramesReused: cachedMPResult.reusedCount,
+            appleVisionFallbackRuns: appleVisionFallbackRuns,
+            mediaPipeRuns: mediaPipeActualRuns,
+            mediaPipeTargetFPS: kMediaPipeTargetFPS,
+            appleVisionMaxFPS: kAppleVisionMaxFPS,
+            schedulerPolicy: "latest_frame_wins"
+        )
 
         let metadata = SessionMetadata(
             sessionId: sessionId, startTimeEpochMs: recordingStartEpochMs, endTimeEpochMs: endEpochMs, durationSec: durationSec,
@@ -480,8 +502,9 @@ final class RecordingOrchestrator: ObservableObject {
             pipeline: SessionMetadata.PipelineInfo(
                 version: kPipelineVersion, build: kPipelineBuild,
                 captureMode: "avfoundation_context",
-                threadModel: "multi-queue", timestampSource: "mach_absolute_time"
+                threadModel: "scheduler_architecture", timestampSource: "mach_absolute_time"
             ),
+            performance: performanceMetrics,
             validation: validation, qcSummary: qcSummary, warnings: warnings
         )
 
@@ -578,6 +601,8 @@ final class RecordingOrchestrator: ObservableObject {
     }
 
     private func cleanup() {
+        mediaPipeScheduler?.reset()
+        mediaPipeScheduler = nil
         visionCaptureBridge = nil
         videoCaptureService = nil; imuCaptureService = nil
         handLandmarkService = nil; handPoseService = nil
@@ -607,38 +632,60 @@ final class RecordingOrchestrator: ObservableObject {
     }
 }
 
-// MARK: - Video Frame Dispatch
+// MARK: - Video Frame Dispatch (Scheduler Architecture)
 
 extension RecordingOrchestrator: VideoCaptureDelegate {
-    nonisolated func videoCaptureService(_ service: VideoCaptureService, didOutputPixelBuffer pixelBuffer: CVPixelBuffer, relativeMs: Double, timestampNs: UInt64, frameIndex: Int) {
-        Task { @MainActor [weak self] in self?.frameCount = frameIndex }
-        if frameIndex % 5 == 0 { let p = Self.previewImage(from: pixelBuffer); Task { @MainActor [weak self] in self?.previewImage = p } }
-        guard let bridge = visionCaptureBridge else { return }
 
-        // MediaPipe: primary — throttled to every Nth frame (~15fps at stride=2)
-        // This is the key optimization: halving MediaPipe load frees the pipeline
-        // and dramatically reduces dropped video frames.
-        if bridge.handLandmarkMP != nil && frameIndex % bridge.mediaPipeStride == 0 {
-            mediaPipeQueue.async {
-                bridge.handLandmarkMP?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs, timestampNs: timestampNs)
-                if let r = bridge.handLandmarkMP?.lastResult { bridge.handPoseMP?.deriveFromLandmarks(r) }
-            }
+    /// Called from VideoCaptureService.captureQueue (.userInteractive).
+    /// Must return immediately — NO ML inference, NO JSON writing here.
+    nonisolated func videoCaptureService(_ service: VideoCaptureService, didOutputPixelBuffer pixelBuffer: CVPixelBuffer, timestamp: CMTime, relativeMs: Double, timestampNs: UInt64, frameIndex: Int) {
+
+        // 1. UI update (lightweight MainActor dispatch)
+        Task { @MainActor [weak self] in self?.frameCount = frameIndex }
+        if frameIndex % 5 == 0 {
+            let p = Self.previewImage(from: pixelBuffer)
+            Task { @MainActor [weak self] in self?.previewImage = p }
         }
 
-        // Apple Vision: fallback when MediaPipe had no hands + baseline strided frames
-        let mpHadNoHands = bridge.handLandmarkMP?.lastResult?.hands.isEmpty ?? true
-        let isStridedFrame = frameIndex % bridge.visionStride == 0
+        guard let bridge = visionCaptureBridge, let scheduler = mediaPipeScheduler else { return }
 
-        guard mpHadNoHands || isStridedFrame else { return }
-        visionQueue.async {
-            bridge.handLandmark?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs, timestampNs: timestampNs)
-            if let r = bridge.handLandmark?.lastResult { bridge.handPose?.deriveFromLandmarks(r) }
-            if isStridedFrame {
-                bridge.facePresence?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs)
-                let appleDetected = !(bridge.handLandmark?.lastResult?.hands.isEmpty ?? true)
-                let mpDetected = !(bridge.handLandmarkMP?.lastResult?.hands.isEmpty ?? true)
-                bridge.frameQC?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs,
-                                              handDetected: appleDetected || mpDetected, faceDetected: bridge.facePresence?.lastFaceDetected ?? false)
+        // 2. MediaPipe: time-gated via ProcessingRateLimiter → backlog-safe via LatestFrameScheduler
+        if bridge.handLandmarkMP != nil && mediaPipeRateLimiter.shouldProcessFrame(timestampNs: timestampNs) {
+            let frame = ProcessingFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs, timestampNs: timestampNs)
+            scheduler.submit(frame) { [weak bridge, cachedMPResult, weak self] pf in
+                guard let bridge else { return }
+                bridge.handLandmarkMP?.processFrame(pixelBuffer: pf.pixelBuffer, frameIndex: pf.frameIndex, relativeMs: pf.relativeMs, timestampNs: pf.timestampNs)
+                if let r = bridge.handLandmarkMP?.lastResult {
+                    bridge.handPoseMP?.deriveFromLandmarks(r)
+                    cachedMPResult.update(timestampNs: pf.timestampNs, hasHands: !r.hands.isEmpty)
+                }
+                self?.mediaPipeActualRuns += 1
+            }
+        } else {
+            cachedMPResult.markReused()
+        }
+
+        // 3. Apple Vision fallback: only when MP has no recent hands AND rate limiter allows
+        let mpHasRecentHands = cachedMPResult.isValid(at: timestampNs) && cachedMPResult.hasHands
+        if !mpHasRecentHands && appleVisionRateLimiter.shouldProcessFrame(timestampNs: timestampNs) {
+            CVPixelBufferRetain(pixelBuffer)
+            processingQueue.async { [weak bridge, weak self] in
+                defer { CVPixelBufferRelease(pixelBuffer) }
+                guard let bridge else { return }
+                bridge.handLandmark?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs, timestampNs: timestampNs)
+                if let r = bridge.handLandmark?.lastResult { bridge.handPose?.deriveFromLandmarks(r) }
+                self?.appleVisionFallbackRuns += 1
+                let avCount = (self?.appleVisionFrameCounter ?? 0) + 1
+                self?.appleVisionFrameCounter = avCount
+
+                // Face presence + QC: piggyback on Apple Vision frames at reduced frequency
+                if avCount % kFaceQCStride == 0 {
+                    bridge.facePresence?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs)
+                    let appleDetected = !(bridge.handLandmark?.lastResult?.hands.isEmpty ?? true)
+                    let mpDetected = !(bridge.handLandmarkMP?.lastResult?.hands.isEmpty ?? true)
+                    bridge.frameQC?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs,
+                                                  handDetected: appleDetected || mpDetected, faceDetected: bridge.facePresence?.lastFaceDetected ?? false)
+                }
             }
         }
     }
