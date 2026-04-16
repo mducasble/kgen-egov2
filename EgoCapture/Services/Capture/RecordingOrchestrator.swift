@@ -32,6 +32,11 @@ final class RecordingOrchestrator: ObservableObject {
     private var recordingStartEpochMs: Double = 0
     private var durationTimer: Timer?
 
+    /// Dedicated queue for preview rendering — never blocks captureQueue.
+    private let previewQueue = DispatchQueue(label: "com.egocapture.preview", qos: .utility)
+    /// Prevents multiple concurrent preview renders from exhausting the pixel buffer pool.
+    nonisolated(unsafe) private var previewInFlight = false
+
     // MARK: - Start
 
     func startRecording() {
@@ -367,22 +372,35 @@ final class RecordingOrchestrator: ObservableObject {
 
     nonisolated private static let sharedCIContext = CIContext(options: [.cacheIntermediates: false])
 
-    nonisolated private static func previewImage(from pb: CVPixelBuffer) -> UIImage? {
+    /// Renders a downscaled (480p) preview. Runs on previewQueue, never on captureQueue.
+    nonisolated private static func downsampledPreview(from pb: CVPixelBuffer) -> UIImage? {
         let ci = CIImage(cvPixelBuffer: pb)
-        let rect = CGRect(x: 0, y: 0, width: CVPixelBufferGetWidth(pb), height: CVPixelBufferGetHeight(pb))
-        guard let cg = sharedCIContext.createCGImage(ci, from: rect) else { return nil }
+        let srcHeight = Double(CVPixelBufferGetHeight(pb))
+        guard srcHeight > 0 else { return nil }
+        let scale = 480.0 / srcHeight
+        let scaled = ci.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        guard let cg = sharedCIContext.createCGImage(scaled, from: scaled.extent) else { return nil }
         return UIImage(cgImage: cg, scale: 1.0, orientation: .up)
     }
 }
 
-// MARK: - Video Frame Delegate (IMU-only: preview only, no ML)
+// MARK: - Video Frame Delegate (IMU-only: zero-cost on captureQueue)
 
 extension RecordingOrchestrator: VideoCaptureDelegate {
+
+    /// Called from captureQueue (.userInteractive). Returns immediately.
+    /// Preview rendering is dispatched to a dedicated utility queue with
+    /// "latest only" semantics — at most one render in flight at a time.
     nonisolated func videoCaptureService(_ service: VideoCaptureService, didOutputPixelBuffer pixelBuffer: CVPixelBuffer, timestamp: CMTime, relativeMs: Double, timestampNs: UInt64, frameIndex: Int) {
         Task { @MainActor [weak self] in self?.frameCount = frameIndex }
-        if frameIndex % 10 == 0 {
-            let p = Self.previewImage(from: pixelBuffer)
-            Task { @MainActor [weak self] in self?.previewImage = p }
+
+        if frameIndex % 6 == 0, !previewInFlight {
+            previewInFlight = true
+            previewQueue.async { [weak self] in
+                let img = Self.downsampledPreview(from: pixelBuffer)
+                self?.previewInFlight = false
+                Task { @MainActor [weak self] in self?.previewImage = img }
+            }
         }
     }
 }
