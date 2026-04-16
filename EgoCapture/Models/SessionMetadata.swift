@@ -11,22 +11,20 @@ struct SessionMetadata: Codable {
     let device: DeviceInfo
     let capture: CaptureInfo
     let camera: CameraInfo
-    let advancedCapture: AdvancedCaptureInfo
+    let captureProfile: CaptureProfile
     let semanticArtifacts: SemanticArtifactInfo
     let imuMetrics: IMUMetrics
     let videoMetrics: VideoMetrics
     let syncMetrics: SyncMetrics
-    let imuPoseConsistency: IMUPoseConsistency
     let handTrackingComparison: HandTrackingComparison?
     let fusedArtifacts: FusedArtifacts
     let captureHealth: CaptureHealth
-    let calibrationQuality: CalibrationQuality
     let coordinateSystem: CoordinateSystem
     let pipeline: PipelineInfo
     let validation: ValidationResult
     let qcSummary: QCSummary?
     let warnings: [String]
-    
+
     struct EnvironmentInfo: Codable {
         let type: String; let subCategory: String; let country: String; let taskDescription: String?
     }
@@ -47,10 +45,12 @@ struct SessionMetadata: Codable {
         let fovSource: String
         let selectedFormatDescription: String
     }
-    struct AdvancedCaptureInfo: Codable {
-        let enabled: Bool; let headPoseAvailable: Bool; let headPoseSource: String
-        let cameraCalibrationAvailable: Bool; let cameraCalibrationSource: String
-        let cameraMountConfigAvailable: Bool
+    struct CaptureProfile: Codable {
+        let mode: String
+        let headPose: Bool
+        let worldTracking: Bool
+        let depthType: String
+        let cameraSource: String
     }
     struct SemanticArtifactInfo: Codable {
         let hasHandLandmarks: Bool; let handLandmarkSource: String
@@ -74,13 +74,11 @@ struct SessionMetadata: Codable {
 
     struct FusedArtifacts: Codable {
         let hasFusedHandPose: Bool
-        let hasFusedHandPoseWorld: Bool
         let fusedDepthType: String
         let fusionMethod: String
         let isMetric3D: Bool
-        let worldSpaceAvailable: Bool
     }
-    
+
     struct IMUMetrics: Codable {
         let totalSamples: Int; let actualSampleRateHz: Double; let startupSamplesDiscarded: Int
         let sampleIntervalStdDevMs: Double; let maxGapMs: Double
@@ -89,51 +87,25 @@ struct SessionMetadata: Codable {
         let totalFrames: Int; let actualAvgFPS: Double; let droppedFrames: Int
         let frameIntervalStdDevMs: Double
     }
-    
+
     struct SyncMetrics: Codable {
-        let videoToHeadPoseAvgDeltaMs: Double?
-        let videoToHeadPoseMaxDeltaMs: Double?
-        let videoToHeadPoseP95DeltaMs: Double?
-        let videoToHeadPoseMappingMode: String?
-        let videoToHeadPoseInterpolatedPercent: Double?
-        let videoToHeadPoseFallbackPercent: Double?
         let imuToVideoEstimatedOffsetMs: Double?
         let imuToVideoSyncMethod: String
-        let imuToVideoSyncConfidence: String // "high", "medium", "low"
+        let imuToVideoSyncConfidence: String
     }
-    
-    struct IMUPoseConsistency: Codable {
-        let angularErrorMeanDeg: Double?
-        let angularErrorMedianDeg: Double?
-        let angularErrorP95Deg: Double?
-        let angularErrorMaxDeg: Double?
-        let angularErrorMeanRadPerSec: Double?
-        let sampleCount: Int
-        let outlierCount: Int
-        let skippedTrackingLossSamples: Int
-        let method: String
-        let confidence: String
-    }
-    
+
     struct CaptureHealth: Codable {
         let videoBackpressureEvents: Int; let imuLagEvents: Int
-        let arkitTrackingLossFrames: Int; let droppedFrames: Int
-        let arkitWasInterrupted: Bool; let arkitError: String?
+        let droppedFrames: Int
     }
-    
-    struct CalibrationQuality: Codable {
-        let distortionAvailable: Bool
-        let mountCalibrationVerified: Bool
-        let mountCalibrationErrorDeg: Double?
-    }
-    
+
     struct CoordinateSystem: Codable {
         let type: String; let referenceFrame: String; let units: String
         let axisConvention: AxisConvention
         struct AxisConvention: Codable { let x: String; let y: String; let z: String }
-        static var arkitDefault: CoordinateSystem {
-            CoordinateSystem(type: "right-handed", referenceFrame: "ARKit world (gravity-aligned)",
-                             units: "meters", axisConvention: AxisConvention(x: "right", y: "up", z: "backward (camera looks toward -Z)"))
+        static var cameraDefault: CoordinateSystem {
+            CoordinateSystem(type: "right-handed", referenceFrame: "camera (image plane)",
+                             units: "normalized", axisConvention: AxisConvention(x: "right", y: "down", z: "forward (into scene)"))
         }
     }
     struct PipelineInfo: Codable {
@@ -142,9 +114,9 @@ struct SessionMetadata: Codable {
     }
     struct ValidationResult: Codable {
         let frameCountConsistent: Bool; let imuCoveragePercent: Double
-        let headPoseCoveragePercent: Double; let timestampsMonotonic: Bool; let issues: [String]
+        let timestampsMonotonic: Bool; let issues: [String]
     }
-    
+
     static func currentDeviceInfo() -> DeviceInfo {
         let d = UIDevice.current
         return DeviceInfo(model: d.model, systemVersion: d.systemVersion, deviceName: d.name)

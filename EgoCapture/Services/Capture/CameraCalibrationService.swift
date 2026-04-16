@@ -1,5 +1,5 @@
 import Foundation
-import ARKit
+import simd
 import AVFoundation
 
 /// Extracts camera intrinsic calibration and distortion data.
