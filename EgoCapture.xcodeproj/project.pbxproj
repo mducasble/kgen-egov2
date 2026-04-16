@@ -38,6 +38,7 @@
 		AA000043 /* FrameQCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000043 /* FrameQCService.swift */; };
 		AA000050 /* SessionPackagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000050 /* SessionPackagingService.swift */; };
 		AA000051 /* JSONLWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000051 /* JSONLWriter.swift */; };
+		AA000052 /* ProcessingScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000052 /* ProcessingScheduler.swift */; };
 		AA000061 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000061 /* SessionManager.swift */; };
 		AA000070 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB000070 /* Assets.xcassets */; };
 		BA100001 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = BA100002 /* hand_landmarker.task */; };
@@ -77,6 +78,7 @@
 		AB000043 /* FrameQCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameQCService.swift; sourceTree = "<group>"; };
 		AB000050 /* SessionPackagingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionPackagingService.swift; sourceTree = "<group>"; };
 		AB000051 /* JSONLWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLWriter.swift; sourceTree = "<group>"; };
+		AB000052 /* ProcessingScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingScheduler.swift; sourceTree = "<group>"; };
 		AB000061 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
 		AB000070 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AB000080 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 			children = (
 				05EF77652F90772500F39AF2 /* MonotonicClock.swift */,
 				AB000051 /* JSONLWriter.swift */,
+				AB000052 /* ProcessingScheduler.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -397,6 +400,7 @@
 				AA000043 /* FrameQCService.swift in Sources */,
 				AA000050 /* SessionPackagingService.swift in Sources */,
 				AA000051 /* JSONLWriter.swift in Sources */,
+				AA000052 /* ProcessingScheduler.swift in Sources */,
 				AA000061 /* SessionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

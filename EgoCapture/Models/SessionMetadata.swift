@@ -21,6 +21,9 @@ struct SessionMetadata: Codable {
     let handTrackingComparison: HandTrackingComparison?
     let fusedArtifacts: FusedArtifacts
     let captureHealth: CaptureHealth
+    let cameraIntrinsics: CameraIntrinsics?
+    let cameraExtrinsics: CameraExtrinsics?
+    let specCompliance: SpecCompliance?
     let coordinateSystem: CoordinateSystem
     let pipeline: PipelineInfo
     let performance: PerformanceMetrics?
@@ -135,6 +138,53 @@ struct SessionMetadata: Codable {
     struct CaptureHealth: Codable {
         let videoBackpressureEvents: Int; let imuLagEvents: Int
         let droppedFrames: Int
+    }
+
+    struct CameraIntrinsics: Codable {
+        let intrinsicsMode: String
+        let deviceModel: String
+        let lens: String
+        let resolution: Resolution
+        let fovHorizontalDeg: Double?
+        let fovDiagonalDeg: Double?
+        let principalPoint: PrincipalPoint
+        let focalLengthPixels: FocalLength
+        let intrinsicsSource: String
+        let distortionModel: String
+        let distortionPresent: Bool
+        let distortionNote: String
+
+        struct Resolution: Codable { let width: Int; let height: Int }
+        struct PrincipalPoint: Codable { let cx: Double?; let cy: Double? }
+        struct FocalLength: Codable { let fx: Double?; let fy: Double? }
+    }
+
+    struct CameraExtrinsics: Codable {
+        let extrinsicsMode: String
+        let referenceFrame: String
+        let mountType: String
+        let translationMeters: Translation
+        let rotationEulerDeg: EulerRotation
+        let rotationQuaternion: Quaternion
+        let extrinsicsSource: String
+        let extrinsicsVerified: Bool
+        let extrinsicsNote: String
+
+        struct Translation: Codable { let x: Double; let y: Double; let z: Double }
+        struct EulerRotation: Codable { let pitch: Double; let yaw: Double; let roll: Double }
+        struct Quaternion: Codable { let x: Double?; let y: Double?; let z: Double?; let w: Double? }
+    }
+
+    struct SpecCompliance: Codable {
+        let videoFormat: String
+        let landscape: Bool
+        let imuIncluded: Bool
+        let poseIncluded: Bool
+        let intrinsicsIncluded: Bool
+        let extrinsicsIncluded: Bool
+        let intrinsicsType: String
+        let extrinsicsType: String
+        let notes: [String]
     }
 
     struct CoordinateSystem: Codable {

@@ -47,6 +47,8 @@ struct TechnicalValidation: Codable {
         let distortionAvailable: Bool
         let mountVerified: Bool
         let mountCalibrationErrorDeg: Double?
+        let intrinsicsMode: String?
+        let extrinsicsMode: String?
     }
     
     struct PassCriteria: Codable {

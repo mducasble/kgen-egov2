@@ -63,6 +63,13 @@ final class VideoCaptureService: NSObject {
     private(set) var exposurePolicy: String = "default"
     private(set) var formatDiagnostics: [[String: Any]] = []
 
+    /// Derived pinhole intrinsics: fx, fy (pixels), cx, cy (pixels).
+    /// Computed from horizontal FOV and capture resolution assuming square pixels.
+    private(set) var focalLengthFx: Double?
+    private(set) var focalLengthFy: Double?
+    private(set) var principalPointCx: Double?
+    private(set) var principalPointCy: Double?
+
     private var previousFrameNs: UInt64?
     private var intervalSumMs: Double = 0
     private var intervalSquaredSumMs: Double = 0
@@ -108,6 +115,13 @@ final class VideoCaptureService: NSObject {
         usedUltraWide = camera.deviceType == .builtInUltraWideCamera || hFov > 100
         actualFovDeg = hFov
         diagonalFovDeg = Self.computeDiagonalFov(horizontalDeg: hFov, width: Int(d.width), height: Int(d.height))
+
+        let derived = Self.deriveIntrinsics(horizontalFovDeg: hFov, width: Int(d.width), height: Int(d.height))
+        focalLengthFx = derived.fx
+        focalLengthFy = derived.fy
+        principalPointCx = derived.cx
+        principalPointCy = derived.cy
+
         fovSource = "avcapture_format"
         fovMode = "hardware"
         fovLimitReached = true
@@ -216,10 +230,8 @@ final class VideoCaptureService: NSObject {
             presentationTimeSec: CMTimeGetSeconds(timestamp), isEstimated: false
         ))
 
-        CVPixelBufferRetain(pixelBuffer)
         writerQueue.async { [weak self] in
             self?.appendToWriter(pixelBuffer, timestamp: timestamp)
-            CVPixelBufferRelease(pixelBuffer)
         }
 
         delegate?.videoCaptureService(self, didOutputPixelBuffer: pixelBuffer, timestamp: timestamp, relativeMs: relativeMs, timestampNs: frameNs, frameIndex: idx)
@@ -354,6 +366,20 @@ final class VideoCaptureService: NSObject {
     }
 
     // MARK: - FOV Helpers
+
+    /// Derive pinhole camera intrinsics from horizontal FOV and resolution.
+    /// Assumes square pixels (fx == fy) and principal point at image center.
+    static func deriveIntrinsics(horizontalFovDeg: Double, width: Int, height: Int) -> (fx: Double, fy: Double, cx: Double, cy: Double) {
+        guard horizontalFovDeg > 0, width > 0, height > 0 else {
+            return (0, 0, Double(width) / 2.0, Double(height) / 2.0)
+        }
+        let hRad = horizontalFovDeg * .pi / 180.0
+        let fx = Double(width) / (2.0 * tan(hRad / 2.0))
+        let fy = fx
+        let cx = Double(width) / 2.0
+        let cy = Double(height) / 2.0
+        return (fx, fy, cx, cy)
+    }
 
     static func computeDiagonalFov(horizontalDeg: Double, width: Int, height: Int) -> Double {
         guard width > 0, height > 0, horizontalDeg > 0 else { return horizontalDeg }

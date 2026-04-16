@@ -4,8 +4,8 @@ import CoreVideo
 import AVFoundation
 import CoreImage
 
-private let kPipelineVersion = "6.0.0"
-private let kPipelineBuild = "scheduler-architecture"
+private let kPipelineVersion = "6.1.0"
+private let kPipelineBuild = "intrinsics-extrinsics"
 
 /// Target MediaPipe inference rate — decoupled from video FPS.
 private let kMediaPipeTargetFPS: Double = 12.0
@@ -407,11 +407,66 @@ final class RecordingOrchestrator: ObservableObject {
         let cameraSource = usedUltraWide ? "avcapture_ultrawide" : "avcapture_wide"
         let mpEffectiveFPS = Int(kMediaPipeTargetFPS)
 
+        // Camera intrinsics: derived pinhole model from FOV + resolution
+        let deviceInfo = SessionMetadata.currentDeviceInfo()
+        let cameraIntrinsics = SessionMetadata.CameraIntrinsics(
+            intrinsicsMode: "standardized_per_device_format",
+            deviceModel: deviceInfo.model,
+            lens: selectedLens,
+            resolution: SessionMetadata.CameraIntrinsics.Resolution(width: resW, height: resH),
+            fovHorizontalDeg: cameraActualFovDeg,
+            fovDiagonalDeg: diagonalFovDeg,
+            principalPoint: SessionMetadata.CameraIntrinsics.PrincipalPoint(
+                cx: videoCaptureService?.principalPointCx,
+                cy: videoCaptureService?.principalPointCy
+            ),
+            focalLengthPixels: SessionMetadata.CameraIntrinsics.FocalLength(
+                fx: videoCaptureService?.focalLengthFx,
+                fy: videoCaptureService?.focalLengthFy
+            ),
+            intrinsicsSource: "device_format_standardization",
+            distortionModel: "unknown",
+            distortionPresent: true,
+            distortionNote: "Ultra-wide lens; image may include Apple software correction. Exact distortion coefficients are not currently exported."
+        )
+
+        // Camera extrinsics: fixed standard headband mount
+        let pitchDeg: Double = -15.0
+        let pitchRad = pitchDeg * .pi / 180.0
+        let qx = sin(pitchRad / 2.0)
+        let qw = cos(pitchRad / 2.0)
+        let cameraExtrinsics = SessionMetadata.CameraExtrinsics(
+            extrinsicsMode: "fixed_mount_spec",
+            referenceFrame: "head_center",
+            mountType: "standard_headband",
+            translationMeters: SessionMetadata.CameraExtrinsics.Translation(x: 0.0, y: 0.05, z: 0.10),
+            rotationEulerDeg: SessionMetadata.CameraExtrinsics.EulerRotation(pitch: pitchDeg, yaw: 0.0, roll: 0.0),
+            rotationQuaternion: SessionMetadata.CameraExtrinsics.Quaternion(x: qx, y: 0.0, z: 0.0, w: qw),
+            extrinsicsSource: "fixed_mount_protocol",
+            extrinsicsVerified: false,
+            extrinsicsNote: "Standardized head-mounted placement used across contributors; fixed offset and downward tilt assumed."
+        )
+
+        let specCompliance = SessionMetadata.SpecCompliance(
+            videoFormat: "mp4_h264",
+            landscape: true,
+            imuIncluded: true,
+            poseIncluded: false,
+            intrinsicsIncluded: true,
+            extrinsicsIncluded: true,
+            intrinsicsType: "standardized_per_device_format",
+            extrinsicsType: "fixed_mount_spec",
+            notes: [
+                "Camera intrinsics are standardized per device, lens, and active format.",
+                "Camera extrinsics are defined using a fixed mount protocol rather than per-user calibration."
+            ]
+        )
+
         let performanceMetrics = SessionMetadata.PerformanceMetrics(
             captureQueueDrops: videoCaptureService?.captureQueueDrops ?? 0,
-            processingFramesSubmitted: schedulerStats.submitted,
-            processingFramesSkipped: schedulerStats.skipped,
-            processingFramesProcessed: schedulerStats.processed,
+            processingFramesSubmitted: schedulerStats.0,
+            processingFramesSkipped: schedulerStats.1,
+            processingFramesProcessed: schedulerStats.2,
             processingFramesReused: cachedMPResult.reusedCount,
             appleVisionFallbackRuns: appleVisionFallbackRuns,
             mediaPipeRuns: mediaPipeActualRuns,
@@ -428,7 +483,7 @@ final class RecordingOrchestrator: ObservableObject {
                 country: ud.string(forKey: "country") ?? "US",
                 taskDescription: { let d = ud.string(forKey: "task_description") ?? ""; return d.isEmpty ? nil : d }()
             ),
-            device: SessionMetadata.currentDeviceInfo(),
+            device: deviceInfo,
             capture: SessionMetadata.CaptureInfo(
                 videoResolutionWidth: resW, videoResolutionHeight: resH, targetFPS: 30, videoCodec: "h264",
                 imuTargetHz: 100, videoTimestampsEstimated: videoTS.contains { $0.isEstimated },
@@ -498,6 +553,9 @@ final class RecordingOrchestrator: ObservableObject {
                 videoBackpressureEvents: videoCaptureService?.backpressureEvents ?? 0,
                 imuLagEvents: imuCaptureService?.lagEventCount ?? 0, droppedFrames: droppedFrames
             ),
+            cameraIntrinsics: cameraIntrinsics,
+            cameraExtrinsics: cameraExtrinsics,
+            specCompliance: specCompliance,
             coordinateSystem: .cameraDefault,
             pipeline: SessionMetadata.PipelineInfo(
                 version: kPipelineVersion, build: kPipelineBuild,
@@ -533,8 +591,10 @@ final class RecordingOrchestrator: ObservableObject {
                 skippedTrackingLossSamples: 0, consistencyConfidence: "n/a", trackingLossFrames: 0
             ),
             calibration: TechnicalValidation.Calibration(
-                intrinsicsAvailable: false, distortionAvailable: false,
-                mountVerified: false, mountCalibrationErrorDeg: nil
+                intrinsicsAvailable: true, distortionAvailable: false,
+                mountVerified: false, mountCalibrationErrorDeg: nil,
+                intrinsicsMode: "standardized_per_device_format",
+                extrinsicsMode: "fixed_mount_spec"
             ),
             passCriteria: TechnicalValidation.PassCriteria(
                 videoStable: avgFPS >= 25 && droppedFrames <= 5,
@@ -668,9 +728,7 @@ extension RecordingOrchestrator: VideoCaptureDelegate {
         // 3. Apple Vision fallback: only when MP has no recent hands AND rate limiter allows
         let mpHasRecentHands = cachedMPResult.isValid(at: timestampNs) && cachedMPResult.hasHands
         if !mpHasRecentHands && appleVisionRateLimiter.shouldProcessFrame(timestampNs: timestampNs) {
-            CVPixelBufferRetain(pixelBuffer)
             processingQueue.async { [weak bridge, weak self] in
-                defer { CVPixelBufferRelease(pixelBuffer) }
                 guard let bridge else { return }
                 bridge.handLandmark?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs, timestampNs: timestampNs)
                 if let r = bridge.handLandmark?.lastResult { bridge.handPose?.deriveFromLandmarks(r) }
