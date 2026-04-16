@@ -8,7 +8,7 @@ protocol VideoCaptureDelegate: AnyObject {
 }
 
 /// Captures video to H.264 MP4 via AVCaptureSession with monotonic timestamps.
-/// Prefers ultra-wide camera when available, falls back to wide-angle.
+/// Context Mode: ultra-wide preferred, resolution capped for stability.
 final class VideoCaptureService: NSObject {
     let outputURL: URL
     let targetFPS: Int = 30
@@ -17,6 +17,7 @@ final class VideoCaptureService: NSObject {
     private let clock = MonotonicClock.shared
 
     private var captureSession: AVCaptureSession?
+    private var captureDevice: AVCaptureDevice?
     private var assetWriter: AVAssetWriter?
     private var assetWriterInput: AVAssetWriterInput?
     private var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor?
@@ -42,6 +43,7 @@ final class VideoCaptureService: NSObject {
     private(set) var orientationLocked: Bool = true
     private(set) var orientation: String = "landscape"
     private(set) var usedUltraWide: Bool = false
+    private(set) var exposurePolicy: String = "default"
 
     private var previousFrameNs: UInt64?
     private var intervalSumMs: Double = 0
@@ -78,24 +80,23 @@ final class VideoCaptureService: NSObject {
         actualResolutionHeight = Int(d.height)
         camera.activeVideoMinFrameDuration = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
         camera.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
+
+        applyLowBlurExposure(camera)
         camera.unlockForConfiguration()
+        captureDevice = camera
 
         selectedLens = lensName(for: camera.deviceType)
-        usedUltraWide = camera.deviceType == .builtInUltraWideCamera
-        actualFovDeg = Double(selection.format.videoFieldOfView)
+        let fov = Double(selection.format.videoFieldOfView)
+        usedUltraWide = camera.deviceType == .builtInUltraWideCamera || fov > 100
+        actualFovDeg = fov
         fovSource = "avcapture_format"
         selectedFormatDescription = selection.formatDescription
         orientationLocked = true
         orientation = "landscape"
 
-        let ranges = selection.format.videoSupportedFrameRateRanges
-            .map { String(format: "%.1f-%.1f", $0.minFrameRate, $0.maxFrameRate) }
-            .joined(separator: ", ")
-        print("[VideoCaptureService] Selected camera: \(camera.deviceType.rawValue)")
-        print("[VideoCaptureService] Ultra-wide: \(usedUltraWide)")
-        print("[VideoCaptureService] FOV: \(String(format: "%.2f", Double(selection.format.videoFieldOfView)))°")
-        print("[VideoCaptureService] Resolution: \(d.width)x\(d.height)")
-        print("[VideoCaptureService] FPS ranges: \(ranges)")
+        print("[VideoCaptureService] Selected: \(camera.deviceType.rawValue)")
+        print("[VideoCaptureService] Ultra-wide: \(usedUltraWide), FOV: \(String(format: "%.1f", fov))°")
+        print("[VideoCaptureService] Resolution: \(d.width)x\(d.height), Exposure: \(exposurePolicy)")
 
         let input = try AVCaptureDeviceInput(device: camera)
         guard session.canAddInput(input) else { throw CaptureError.cannotAddInput }
@@ -103,7 +104,7 @@ final class VideoCaptureService: NSObject {
 
         let output = AVCaptureVideoDataOutput()
         output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-        output.alwaysDiscardsLateVideoFrames = false
+        output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: writerQueue)
         guard session.canAddOutput(output) else { throw CaptureError.cannotAddOutput }
         session.addOutput(output)
@@ -119,6 +120,20 @@ final class VideoCaptureService: NSObject {
         self.captureSession = session
         detectedPixelFormat = kCVPixelFormatType_32BGRA
         try createAssetWriter(width: actualResolutionWidth, height: actualResolutionHeight)
+    }
+
+    /// Reduce motion blur: bias toward shorter exposures.
+    private func applyLowBlurExposure(_ camera: AVCaptureDevice) {
+        if camera.isExposureModeSupported(.continuousAutoExposure) {
+            camera.exposureMode = .continuousAutoExposure
+        }
+        let maxDuration = CMTime(value: 1, timescale: 60)
+        if camera.activeFormat.maxExposureDuration > maxDuration {
+            camera.setExposureTargetBias(-0.5) { _ in }
+            exposurePolicy = "bias_negative_0.5_maxdur_1_60"
+        } else {
+            exposurePolicy = "auto"
+        }
     }
 
     func startRecording(epochStartMs: Double) throws {
@@ -230,51 +245,75 @@ final class VideoCaptureService: NSObject {
         let device: AVCaptureDevice
         let format: AVCaptureDevice.Format
         let formatDescription: String
-        let supportsTargetFPS: Bool
     }
 
-    /// Select best camera: prefer ultra-wide, then wide-angle, then any back camera.
+    private static let preferredResolutions: [(Int32, Int32)] = [
+        (1920, 1080),
+        (2560, 1440),
+        (1280, 720),
+    ]
+
+    /// Context Mode camera selection:
+    /// 1. Find all ultra-wide formats that support 30fps
+    /// 2. Prefer 1920x1080, then 2560x1440, then 1280x720
+    /// 3. At each resolution tier, pick the widest FOV
+    /// 4. Fallback: widest FOV format on any device at ≤1920x1080
     private func selectPreferredCamera(targetFPS: Int) -> CameraFormatSelection? {
-        if let uw = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back),
-           let sel = bestFormat(on: uw, targetFPS: targetFPS) {
-            return sel
-        }
-        if let wide = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-           let sel = bestFormat(on: wide, targetFPS: targetFPS) {
-            return sel
-        }
         let discovery = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInDualWideCamera, .builtInDualCamera, .builtInTripleCamera],
+            deviceTypes: [
+                .builtInUltraWideCamera,
+                .builtInWideAngleCamera,
+                .builtInDualWideCamera,
+                .builtInTripleCamera
+            ],
             mediaType: .video, position: .back
         )
+
+        var candidates: [(device: AVCaptureDevice, format: AVCaptureDevice.Format, fov: Float, w: Int32, h: Int32)] = []
         for device in discovery.devices {
-            if let sel = bestFormat(on: device, targetFPS: targetFPS) { return sel }
+            for format in device.formats {
+                let ok = format.videoSupportedFrameRateRanges.contains { $0.maxFrameRate >= Double(targetFPS) }
+                guard ok else { continue }
+                let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+                let fov = format.videoFieldOfView
+                candidates.append((device, format, fov, dims.width, dims.height))
+            }
+        }
+
+        print("[VideoCaptureService] Found \(candidates.count) candidate formats across \(discovery.devices.count) devices")
+        for (pref_w, pref_h) in Self.preferredResolutions {
+            let tierCandidates = candidates.filter { $0.w == pref_w && $0.h == pref_h && $0.fov > 90 }
+            if let best = tierCandidates.max(by: { $0.fov < $1.fov }) {
+                print("[VideoCaptureService] Matched preferred \(pref_w)x\(pref_h) with FOV \(String(format: "%.1f", best.fov))°")
+                return makeSelection(best.device, best.format)
+            }
+        }
+
+        for (pref_w, pref_h) in Self.preferredResolutions {
+            let tierCandidates = candidates.filter { $0.w == pref_w && $0.h == pref_h }
+            if let best = tierCandidates.max(by: { $0.fov < $1.fov }) {
+                print("[VideoCaptureService] Matched preferred \(pref_w)x\(pref_h) (non-UW) with FOV \(String(format: "%.1f", best.fov))°")
+                return makeSelection(best.device, best.format)
+            }
+        }
+
+        let stableCandidates = candidates.filter { $0.w * $0.h <= 1920 * 1080 && $0.w * $0.h >= 1280 * 720 }
+        if let best = stableCandidates.max(by: { $0.fov < $1.fov }) {
+            print("[VideoCaptureService] Fallback to \(best.w)x\(best.h) with FOV \(String(format: "%.1f", best.fov))°")
+            return makeSelection(best.device, best.format)
+        }
+
+        if let best = candidates.max(by: { $0.fov < $1.fov }) {
+            print("[VideoCaptureService] Last-resort: \(best.w)x\(best.h) FOV \(String(format: "%.1f", best.fov))°")
+            return makeSelection(best.device, best.format)
         }
         return nil
     }
 
-    private func bestFormat(on device: AVCaptureDevice, targetFPS: Int) -> CameraFormatSelection? {
-        var best: AVCaptureDevice.Format?
-        var bestFov: Float = -1
-        var bestPixels: Int32 = -1
-
-        for format in device.formats {
-            let supportsFPS = format.videoSupportedFrameRateRanges.contains { $0.maxFrameRate >= Double(targetFPS) }
-            guard supportsFPS else { continue }
-            let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
-            let pixels = dims.width * dims.height
-            guard pixels >= 1920 * 1080 else { continue }
-
-            let fov = format.videoFieldOfView
-            if fov > bestFov + 0.01 || (abs(fov - bestFov) < 0.01 && pixels > bestPixels) {
-                best = format; bestFov = fov; bestPixels = pixels
-            }
-        }
-
-        guard let best else { return nil }
-        let dims = CMVideoFormatDescriptionGetDimensions(best.formatDescription)
-        let desc = "\(device.deviceType.rawValue) \(dims.width)x\(dims.height) fov=\(String(format: "%.2f", Double(best.videoFieldOfView)))"
-        return CameraFormatSelection(device: device, format: best, formatDescription: desc, supportsTargetFPS: true)
+    private func makeSelection(_ device: AVCaptureDevice, _ format: AVCaptureDevice.Format) -> CameraFormatSelection {
+        let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+        let desc = "\(device.deviceType.rawValue) \(dims.width)x\(dims.height) fov=\(String(format: "%.1f", Double(format.videoFieldOfView)))"
+        return CameraFormatSelection(device: device, format: format, formatDescription: desc)
     }
 
     private func lensName(for deviceType: AVCaptureDevice.DeviceType) -> String {

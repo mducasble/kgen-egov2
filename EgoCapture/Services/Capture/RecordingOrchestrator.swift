@@ -4,8 +4,8 @@ import CoreVideo
 import AVFoundation
 import CoreImage
 
-private let kPipelineVersion = "4.0.0"
-private let kPipelineBuild = "context-mode"
+private let kPipelineVersion = "4.1.0"
+private let kPipelineBuild = "context-mode-optimized"
 
 fileprivate final class VisionCaptureBridge: @unchecked Sendable {
     let visionStride: Int
@@ -68,7 +68,16 @@ final class RecordingOrchestrator: ObservableObject {
         let mediaPipeFrameCount: Int
         let appleVisionCoveragePercent: Double
         let mediaPipeCoveragePercent: Double
+        let fallbackEnabled: Bool
         let notes: [String]
+    }
+
+    /// Best-of selection output row
+    private struct BestOfLandmarkEntry: Codable {
+        let frameIndex: Int
+        let timestampNs: UInt64
+        let selectedSource: String
+        let hands: [HandLandmarkSample.DetectedHand]
     }
 
     // MARK: - Published State
@@ -129,39 +138,31 @@ final class RecordingOrchestrator: ObservableObject {
         recordingStartEpochMs = Date().timeIntervalSince1970 * 1000.0
         let dir = session.directory
 
-        let ud = UserDefaults.standard
-
         do {
             // IMU
             let imu = IMUCaptureService()
             try imu.start(outputURL: dir.appendingPathComponent("imu.jsonl"), epochStartMs: recordingStartEpochMs)
             imuCaptureService = imu
 
-            // Hand tracking — MediaPipe primary, Apple Vision fallback
-            var backendMode = HandTrackingBackendType(rawValue: ud.string(forKey: "selected_hand_tracking_backend") ?? "") ?? .mediaPipe
-            if backendMode == .appleVision { backendMode = .both }
+            // Context Mode: always run both backends
+            // MediaPipe = primary, Apple Vision = fallback
+            let hl = HandLandmarkService(backend: AppleVisionHandBackend())
+            try hl.start(outputURL: dir.appendingPathComponent("hand_landmarks.jsonl"), epochStartMs: recordingStartEpochMs)
+            handLandmarkService = hl
+            let hp = HandPoseDerivationService(has3DLandmarks: hl.provides3D, sourceName: hl.backendName)
+            try hp.start(outputURL: dir.appendingPathComponent("hand_pose.jsonl"), epochStartMs: recordingStartEpochMs)
+            handPoseService = hp
 
-            if backendMode == .appleVision || backendMode == .both {
-                let hl = HandLandmarkService(backend: AppleVisionHandBackend())
-                try hl.start(outputURL: dir.appendingPathComponent("hand_landmarks.jsonl"), epochStartMs: recordingStartEpochMs)
-                handLandmarkService = hl
-                let hp = HandPoseDerivationService(has3DLandmarks: hl.provides3D, sourceName: hl.backendName)
-                try hp.start(outputURL: dir.appendingPathComponent("hand_pose.jsonl"), epochStartMs: recordingStartEpochMs)
-                handPoseService = hp
+            let mediaPipeBackend = MediaPipeHandBackend()
+            mediaPipeBackend.onDebugInputFrame = { [weak self] image in
+                Task { @MainActor [weak self] in self?.previewImage = image }
             }
-
-            if backendMode == .mediaPipe || backendMode == .both {
-                let mediaPipeBackend = MediaPipeHandBackend()
-                mediaPipeBackend.onDebugInputFrame = { [weak self] image in
-                    Task { @MainActor [weak self] in self?.previewImage = image }
-                }
-                let hlMP = HandLandmarkService(backend: mediaPipeBackend)
-                try hlMP.start(outputURL: dir.appendingPathComponent("hand_landmarks_mediapipe.jsonl"), epochStartMs: recordingStartEpochMs)
-                handLandmarkMediaPipeService = hlMP
-                let hpMP = HandPoseDerivationService(has3DLandmarks: hlMP.provides3D, sourceName: hlMP.backendName)
-                try hpMP.start(outputURL: dir.appendingPathComponent("hand_pose_mediapipe.jsonl"), epochStartMs: recordingStartEpochMs)
-                handPoseMediaPipeService = hpMP
-            }
+            let hlMP = HandLandmarkService(backend: mediaPipeBackend)
+            try hlMP.start(outputURL: dir.appendingPathComponent("hand_landmarks_mediapipe.jsonl"), epochStartMs: recordingStartEpochMs)
+            handLandmarkMediaPipeService = hlMP
+            let hpMP = HandPoseDerivationService(has3DLandmarks: hlMP.provides3D, sourceName: hlMP.backendName)
+            try hpMP.start(outputURL: dir.appendingPathComponent("hand_pose_mediapipe.jsonl"), epochStartMs: recordingStartEpochMs)
+            handPoseMediaPipeService = hpMP
 
             let fp = FacePresenceService()
             try fp.start(outputURL: dir.appendingPathComponent("face_presence.jsonl"), epochStartMs: recordingStartEpochMs)
@@ -180,7 +181,7 @@ final class RecordingOrchestrator: ObservableObject {
                 frameQC: frameQCService
             )
 
-            // Video — AVCaptureSession, ultra-wide preferred
+            // Video — AVCaptureSession, ultra-wide preferred, stability-optimized resolution
             let video = VideoCaptureService(outputURL: dir.appendingPathComponent("video.mp4"))
             video.delegate = self; videoCaptureService = video
             try video.setup()
@@ -244,13 +245,18 @@ final class RecordingOrchestrator: ObservableObject {
             imuTimestampsNs: imuCaptureService?.allTimestampsNs ?? []
         )
 
-        // 3. Build fused hand pose (camera-space only)
+        // 3. Build fused hand pose (camera-space only) + best-of selection
         var fusionWarnings: [String] = []
         var fusedHandPoseWritten = false
+        var bestOfStats = SessionMetadata.BestOfStats(totalFrames: 0, mediaPipeSelected: 0, appleVisionSelected: 0, noneSelected: 0)
+
         do {
             let mediapipeURL = dir.appendingPathComponent("hand_landmarks_mediapipe.jsonl")
+            let appleURL = dir.appendingPathComponent("hand_landmarks.jsonl")
             let mediaPipeRows = try loadHandLandmarkSamples(from: mediapipeURL)
+            let appleRows = try loadHandLandmarkSamples(from: appleURL)
             let mediaPipeByFrame = Dictionary(mediaPipeRows.map { ($0.frameIndex, $0) }, uniquingKeysWith: { _, new in new })
+            let appleByFrame = Dictionary(appleRows.map { ($0.frameIndex, $0) }, uniquingKeysWith: { _, new in new })
 
             let imageWidth = Double(max(1, videoCaptureService?.actualResolutionWidth ?? 1920))
             let imageHeight = Double(max(1, videoCaptureService?.actualResolutionHeight ?? 1080))
@@ -261,15 +267,51 @@ final class RecordingOrchestrator: ObservableObject {
             var badValueCount = 0
             var timestampMismatchCount = 0
             let fusedWriter = try JSONLWriter(fileURL: dir.appendingPathComponent("fused_hand_pose.jsonl"))
+            let bestOfWriter = try JSONLWriter(fileURL: dir.appendingPathComponent("hand_landmarks_best.jsonl"))
+
+            var boTotal = 0, boMP = 0, boAV = 0, boNone = 0
+            let mpConfidenceThreshold = 0.3
 
             for frame in videoTS.sorted(by: { $0.frameIndex < $1.frameIndex }) {
                 let mpRow = mediaPipeByFrame[frame.frameIndex]
+                let avRow = appleByFrame[frame.frameIndex]
+
                 if let mpRow, abs(Int64(mpRow.timestampNs) - Int64(frame.timestampNs)) > 5_000_000 {
                     timestampMismatchCount += 1
                 }
 
+                // --- Best-of selection ---
+                let mpHasHands = mpRow.map { !$0.hands.isEmpty && $0.hands.contains { $0.confidence >= mpConfidenceThreshold } } ?? false
+                let avHasHands = avRow.map { !$0.hands.isEmpty } ?? false
+
+                let selectedSource: String
+                let selectedHands: [HandLandmarkSample.DetectedHand]
+                if mpHasHands {
+                    selectedSource = "mediapipe"
+                    selectedHands = mpRow!.hands
+                    boMP += 1
+                } else if avHasHands {
+                    selectedSource = "apple_vision"
+                    selectedHands = avRow!.hands
+                    boAV += 1
+                } else {
+                    selectedSource = "none"
+                    selectedHands = []
+                    boNone += 1
+                }
+                boTotal += 1
+
+                bestOfWriter.append(BestOfLandmarkEntry(
+                    frameIndex: frame.frameIndex,
+                    timestampNs: frame.timestampNs,
+                    selectedSource: selectedSource,
+                    hands: selectedHands
+                ))
+
+                // --- Fused hand pose from best source ---
+                let sourceHands = selectedHands
                 var fusedHands: [FusedHand] = []
-                for hand in mpRow?.hands ?? [] {
+                for hand in sourceHands {
                     var landmarks: [FusedLandmark3D] = []
                     for lm in hand.landmarks {
                         let px = lm.x * imageWidth
@@ -296,13 +338,15 @@ final class RecordingOrchestrator: ObservableObject {
                 if !fusedHands.isEmpty { fusedFramesWithHands += 1 }
             }
             fusedWriter.close()
+            bestOfWriter.close()
             fusedHandPoseWritten = fusedFrameCount > 0
+            bestOfStats = SessionMetadata.BestOfStats(totalFrames: boTotal, mediaPipeSelected: boMP, appleVisionSelected: boAV, noneSelected: boNone)
 
             if badValueCount > 0 { fusionWarnings.append("Fused hand pose skipped \(badValueCount) invalid landmark values.") }
             if timestampMismatchCount > 0 { fusionWarnings.append("Found \(timestampMismatchCount) timestamp mismatches between video and MediaPipe rows.") }
             if fusedFramesWithHands == 0 && !videoTS.isEmpty { fusionWarnings.append("No hands detected; check MediaPipe model.") }
         } catch {
-            fusionWarnings.append("Failed to write fused_hand_pose.jsonl: \(error.localizedDescription)")
+            fusionWarnings.append("Failed to write fused/best-of files: \(error.localizedDescription)")
         }
 
         // 4. Compute metrics
@@ -320,14 +364,14 @@ final class RecordingOrchestrator: ObservableObject {
         let cameraActualFovDeg = videoCaptureService?.actualFovDeg
         let selectedFormatDescription = videoCaptureService?.selectedFormatDescription ?? "unknown"
         let usedUltraWide = videoCaptureService?.usedUltraWide ?? false
+        let exposurePolicy = videoCaptureService?.exposurePolicy ?? "default"
 
-        let backendMode: HandTrackingBackendType = .both
         let appleProcessed = handLandmarkService?.processedFrameCount ?? 0
         let mediaPipeProcessed = handLandmarkMediaPipeService?.processedFrameCount ?? 0
 
-        // Warnings
+        // Context Mode validation warnings
         var warnings: [String] = []
-        if droppedFrames > 0 { warnings.append("Dropped \(droppedFrames) video frames") }
+        if droppedFrames > 5 { warnings.append("droppedFrames=\(droppedFrames) exceeds context-mode target of ≤5") }
         if !isLandscape { warnings.append("Video orientation inconsistent with landscape lock.") }
         if !(handLandmarkMediaPipeService?.provides3D ?? false) {
             warnings.append("MediaPipe z-values are normalized depth, not metric 3D.")
@@ -336,6 +380,13 @@ final class RecordingOrchestrator: ObservableObject {
             warnings.append("MediaPipe produced no hand detections. Verify model asset.")
         }
         if imuVideoSync.confidence == "low" { warnings.append("IMU↔video sync confidence is low.") }
+        if !usedUltraWide { warnings.append("Ultra-wide camera not available; fell back to wide.") }
+        if let fov = cameraActualFovDeg, fov < 100 {
+            warnings.append("actualFovDeg=\(String(format: "%.1f", fov))° is below 100° context-mode target.")
+        }
+        if appleProcessed == 0 {
+            warnings.append("Apple Vision fallback processed 0 frames; fallback coverage is 0.")
+        }
         warnings.append(contentsOf: fusionWarnings)
 
         // Hand tracking comparison
@@ -358,7 +409,10 @@ final class RecordingOrchestrator: ObservableObject {
             appleVisionFrameCount: appleProcessed, mediaPipeFrameCount: mediaPipeProcessed,
             appleVisionAverageHandsPerFrame: appleAvgHands, mediaPipeAverageHandsPerFrame: mediaPipeAvgHands,
             appleVisionAverageConfidence: appleAvgConfidence, mediaPipeAverageConfidence: mediaPipeAvgConfidence,
-            coverageWinner: coverageWinner, notes: comparisonNotes
+            coverageWinner: coverageWinner,
+            fallbackEnabled: true,
+            bestOfFrames: bestOfStats,
+            notes: comparisonNotes
         )
 
         let syncMetrics = SessionMetadata.SyncMetrics(
@@ -368,7 +422,10 @@ final class RecordingOrchestrator: ObservableObject {
         )
 
         let validation = validateSession(videoFrames: totalFrames, imuSamples: imuCaptureService?.totalSamples ?? 0,
-                                         durationSec: durationSec, videoTimestamps: videoTS)
+                                         durationSec: durationSec, videoTimestamps: videoTS,
+                                         droppedFrames: droppedFrames, usedUltraWide: usedUltraWide,
+                                         actualFovDeg: cameraActualFovDeg, avgFPS: avgFPS,
+                                         mediaPipeCoverage: mediaPipeCoverage, appleCoverage: appleCoverage)
 
         let cameraSource = usedUltraWide ? "avcapture_ultrawide" : "avcapture_wide"
 
@@ -390,11 +447,21 @@ final class RecordingOrchestrator: ObservableObject {
             ),
             camera: SessionMetadata.CameraInfo(
                 selectedLens: selectedLens, actualFovDeg: cameraActualFovDeg,
-                fovSource: cameraFovSource, selectedFormatDescription: selectedFormatDescription
+                fovSource: cameraFovSource, selectedFormatDescription: selectedFormatDescription,
+                usedUltraWide: usedUltraWide, exposurePolicy: exposurePolicy
             ),
             captureProfile: SessionMetadata.CaptureProfile(
                 mode: "context", headPose: false, worldTracking: false,
                 depthType: "none", cameraSource: cameraSource
+            ),
+            contextTracking: SessionMetadata.ContextTracking(
+                primaryHandTracker: "mediapipe",
+                trackingPriority: "recall",
+                fallbackEnabled: true,
+                fallbackTracker: "apple_vision",
+                bestOfSelectionEnabled: true,
+                mediaPipeMinDetectionConfidence: 0.3,
+                mediaPipeMinTrackingConfidence: 0.3
             ),
             semanticArtifacts: SessionMetadata.SemanticArtifactInfo(
                 hasHandLandmarks: ((handLandmarkService?.rowCount ?? 0) + (handLandmarkMediaPipeService?.rowCount ?? 0)) > 0,
@@ -418,7 +485,7 @@ final class RecordingOrchestrator: ObservableObject {
             fusedArtifacts: SessionMetadata.FusedArtifacts(
                 hasFusedHandPose: fusedHandPoseWritten,
                 fusedDepthType: "relative_normalized",
-                fusionMethod: "normalized_depth",
+                fusionMethod: "best_of_normalized_depth",
                 isMetric3D: false
             ),
             captureHealth: SessionMetadata.CaptureHealth(
@@ -474,9 +541,10 @@ final class RecordingOrchestrator: ObservableObject {
         do { try JSONFileWriter.write(techVal, to: dir.appendingPathComponent("technical_validation.json")) } catch {}
 
         let comparisonDebug = HandTrackingComparisonDebug(
-            sessionId: sessionId, backendMode: backendMode.rawValue,
+            sessionId: sessionId, backendMode: "both",
             appleVisionFrameCount: appleProcessed, mediaPipeFrameCount: mediaPipeProcessed,
             appleVisionCoveragePercent: appleCoverage, mediaPipeCoveragePercent: mediaPipeCoverage,
+            fallbackEnabled: true,
             notes: comparisonNotes
         )
         do { try JSONFileWriter.write(comparisonDebug, to: dir.appendingPathComponent("hand_tracking_comparison.json")) } catch {}
@@ -488,7 +556,11 @@ final class RecordingOrchestrator: ObservableObject {
 
     // MARK: - Validation
 
-    private func validateSession(videoFrames: Int, imuSamples: Int, durationSec: Double, videoTimestamps: [VideoTimestamp]) -> SessionMetadata.ValidationResult {
+    private func validateSession(
+        videoFrames: Int, imuSamples: Int, durationSec: Double, videoTimestamps: [VideoTimestamp],
+        droppedFrames: Int, usedUltraWide: Bool, actualFovDeg: Double?, avgFPS: Double,
+        mediaPipeCoverage: Double, appleCoverage: Double
+    ) -> SessionMetadata.ValidationResult {
         var issues: [String] = []
         let expectedIMU = durationSec * 100
         let imuCov = expectedIMU > 0 ? min(Double(imuSamples) / expectedIMU * 100, 100) : 0
@@ -497,6 +569,15 @@ final class RecordingOrchestrator: ObservableObject {
         for i in 1..<videoTimestamps.count {
             if videoTimestamps[i].timestampNs <= videoTimestamps[i-1].timestampNs { mono = false; issues.append("Non-monotonic timestamp at frame \(i)"); break }
         }
+
+        // Context Mode validation targets
+        if !usedUltraWide { issues.append("WARN: usedUltraWide=false") }
+        if let fov = actualFovDeg, fov < 100 { issues.append("WARN: actualFovDeg=\(String(format: "%.1f", fov))° < 100°") }
+        if droppedFrames > 5 { issues.append("WARN: droppedFrames=\(droppedFrames) > 5") }
+        if avgFPS < 25 { issues.append("WARN: actualAvgFPS=\(String(format: "%.1f", avgFPS)) < 25") }
+        if mediaPipeCoverage < 85 { issues.append("WARN: mediaPipeCoverage=\(String(format: "%.1f", mediaPipeCoverage))% < 85%") }
+        if appleCoverage == 0 { issues.append("WARN: appleCoverage=0% (fallback inactive)") }
+
         return SessionMetadata.ValidationResult(frameCountConsistent: true, imuCoveragePercent: imuCov, timestampsMonotonic: mono, issues: issues)
     }
 
@@ -518,12 +599,6 @@ final class RecordingOrchestrator: ObservableObject {
             guard !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
             return try? decoder.decode(HandLandmarkSample.self, from: Data(line.utf8))
         }
-    }
-
-    private func percentile(_ sorted: [Double], p: Double) -> Double {
-        guard !sorted.isEmpty else { return 0 }
-        let idx = Int(Double(sorted.count - 1) * min(max(p, 0), 1))
-        return sorted[idx]
     }
 
     private func cleanup() {
@@ -556,12 +631,15 @@ final class RecordingOrchestrator: ObservableObject {
     }
 }
 
+// MARK: - Video Frame Dispatch
+
 extension RecordingOrchestrator: VideoCaptureDelegate {
     nonisolated func videoCaptureService(_ service: VideoCaptureService, didOutputPixelBuffer pixelBuffer: CVPixelBuffer, relativeMs: Double, timestampNs: UInt64, frameIndex: Int) {
         Task { @MainActor [weak self] in self?.frameCount = frameIndex }
         if frameIndex % 5 == 0 { let p = Self.previewImage(from: pixelBuffer); Task { @MainActor [weak self] in self?.previewImage = p } }
         guard let bridge = visionCaptureBridge else { return }
 
+        // MediaPipe: primary tracker — runs on every frame
         if bridge.handLandmarkMP != nil {
             mediaPipeQueue.async {
                 bridge.handLandmarkMP?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs, timestampNs: timestampNs)
@@ -569,7 +647,13 @@ extension RecordingOrchestrator: VideoCaptureDelegate {
             }
         }
 
-        guard frameIndex % bridge.visionStride == 0 else { return }
+        // Apple Vision: fallback — runs when MediaPipe's latest result had no hands,
+        // and also on strided frames for baseline comparison
+        let mpHadNoHands = bridge.handLandmarkMP?.lastResult?.hands.isEmpty ?? true
+        let isFallbackFrame = mpHadNoHands
+        let isStridedFrame = frameIndex % bridge.visionStride == 0
+
+        guard isFallbackFrame || isStridedFrame else { return }
         visionQueue.async {
             bridge.handLandmark?.processFrame(pixelBuffer: pixelBuffer, frameIndex: frameIndex, relativeMs: relativeMs, timestampNs: timestampNs)
             if let r = bridge.handLandmark?.lastResult { bridge.handPose?.deriveFromLandmarks(r) }

@@ -12,6 +12,7 @@ struct SessionMetadata: Codable {
     let capture: CaptureInfo
     let camera: CameraInfo
     let captureProfile: CaptureProfile
+    let contextTracking: ContextTracking?
     let semanticArtifacts: SemanticArtifactInfo
     let imuMetrics: IMUMetrics
     let videoMetrics: VideoMetrics
@@ -44,6 +45,8 @@ struct SessionMetadata: Codable {
         let actualFovDeg: Double?
         let fovSource: String
         let selectedFormatDescription: String
+        let usedUltraWide: Bool?
+        let exposurePolicy: String?
     }
     struct CaptureProfile: Codable {
         let mode: String
@@ -51,6 +54,15 @@ struct SessionMetadata: Codable {
         let worldTracking: Bool
         let depthType: String
         let cameraSource: String
+    }
+    struct ContextTracking: Codable {
+        let primaryHandTracker: String
+        let trackingPriority: String
+        let fallbackEnabled: Bool
+        let fallbackTracker: String?
+        let bestOfSelectionEnabled: Bool
+        let mediaPipeMinDetectionConfidence: Double
+        let mediaPipeMinTrackingConfidence: Double
     }
     struct SemanticArtifactInfo: Codable {
         let hasHandLandmarks: Bool; let handLandmarkSource: String
@@ -69,7 +81,16 @@ struct SessionMetadata: Codable {
         let appleVisionAverageConfidence: Double?
         let mediaPipeAverageConfidence: Double?
         let coverageWinner: String
+        let fallbackEnabled: Bool
+        let bestOfFrames: BestOfStats?
         let notes: [String]
+    }
+
+    struct BestOfStats: Codable {
+        let totalFrames: Int
+        let mediaPipeSelected: Int
+        let appleVisionSelected: Int
+        let noneSelected: Int
     }
 
     struct FusedArtifacts: Codable {
