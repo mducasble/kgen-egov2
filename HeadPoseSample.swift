@@ -4,6 +4,8 @@ import Foundation
 /// Position is in meters relative to the ARKit world origin.
 /// Rotation is a unit quaternion (Hamilton convention: x, y, z, w).
 struct HeadPoseSample: Codable {
+    /// Monotonic timestamp captured from mach-derived uptime clock.
+    let timestampNs: Int64
     let timestampEpochMs: Double
     let relativeMs: Double
     /// Frame index linkage to video timeline, null if not synchronized to a video frame

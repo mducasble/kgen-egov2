@@ -1,0 +1,1 @@
+../SessionManifest.swift

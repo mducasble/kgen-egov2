@@ -14,6 +14,8 @@ struct SettingsView: View {
     @AppStorage("environment_sub") private var environmentSubCategory = "room_tidy_up"
     @AppStorage("country") private var country = "US"
     @AppStorage("task_description") private var taskDescription = ""
+    @AppStorage("selected_hand_tracking_backend") private var handTrackingBackend = HandTrackingBackendType.appleVision.rawValue
+    @AppStorage("mediapipe_model_path") private var mediaPipeModelPath = "hand_landmarker.task"
     
     var body: some View {
         Form {
@@ -106,6 +108,24 @@ struct SettingsView: View {
                 Text("e.g., \"dishes cleanup\" or \"warehouse stocking\"")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+            }
+
+            Section("Hand Tracking Backend") {
+                Picker("Backend", selection: $handTrackingBackend) {
+                    Text("Apple Vision").tag(HandTrackingBackendType.appleVision.rawValue)
+                    Text("MediaPipe").tag(HandTrackingBackendType.mediaPipe.rawValue)
+                    Text("Both (parallel)").tag(HandTrackingBackendType.both.rawValue)
+                }
+                Text("MediaPipe outputs are saved separately as *_mediapipe.jsonl when enabled.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                if handTrackingBackend != HandTrackingBackendType.appleVision.rawValue {
+                    TextField("MediaPipe model path", text: $mediaPipeModelPath)
+                    Text("Default: hand_landmarker.task (bundle path)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .navigationTitle("Settings")

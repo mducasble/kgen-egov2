@@ -46,7 +46,15 @@ final class SessionPackagingService {
                 rowCount = countLines(at: fileURL)
             case "head_pose_video_map.jsonl":
                 type = "jsonl"
-                description = "Nearest-timestamp mapping between head pose and video frames"
+                description = "Frame-aligned head pose mapping for each video frame (interpolation with fallbacks)"
+                rowCount = countLines(at: fileURL)
+            case "head_pose_interpolated.jsonl":
+                type = "jsonl"
+                description = "Interpolated head pose estimates at exact video frame timestamps"
+                rowCount = countLines(at: fileURL)
+            case "imu_pose_consistency_debug.jsonl":
+                type = "jsonl"
+                description = "Debug rows for IMU versus interpolated head pose consistency validation"
                 rowCount = countLines(at: fileURL)
             case "camera_calibration.json":
                 type = "json"
@@ -58,10 +66,29 @@ final class SessionPackagingService {
                 type = "jsonl"
                 description = "Per-frame hand landmark detections (21 landmarks per hand)"
                 rowCount = countLines(at: fileURL)
+            case "hand_landmarks_mediapipe.jsonl":
+                type = "jsonl"
+                description = "Per-frame hand landmarks from MediaPipe Hand Landmarker"
+                rowCount = countLines(at: fileURL)
             case "hand_pose.jsonl":
                 type = "jsonl"
                 description = "Derived hand pose (fingertips, joint angles, thumb opposition)"
                 rowCount = countLines(at: fileURL)
+            case "hand_pose_mediapipe.jsonl":
+                type = "jsonl"
+                description = "Derived hand pose from MediaPipe landmarks"
+                rowCount = countLines(at: fileURL)
+            case "fused_hand_pose.jsonl":
+                type = "jsonl"
+                description = "Fused hand pose in camera-relative coordinates from intrinsics projection + normalized depth"
+                rowCount = countLines(at: fileURL)
+            case "fused_hand_pose_world.jsonl":
+                type = "jsonl"
+                description = "World-space fused hand pose transformed from camera-relative coordinates"
+                rowCount = countLines(at: fileURL)
+            case "world_fusion_validation.json":
+                type = "json"
+                description = "Validation summary for world-space hand fusion"
             case "face_presence.jsonl":
                 type = "jsonl"
                 description = "Per-frame face presence detection for privacy/QC"
@@ -73,6 +100,9 @@ final class SessionPackagingService {
             case "metadata.json":
                 type = "json"
                 description = "Session metadata, device info, capture config, and QC summary"
+            case "hand_tracking_comparison.json":
+                type = "json"
+                description = "Comparison summary between Apple Vision and MediaPipe hand tracking"
             default:
                 type = fileURL.pathExtension
                 description = "Additional artifact"

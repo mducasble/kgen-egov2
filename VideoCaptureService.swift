@@ -20,12 +20,10 @@ protocol VideoCaptureDelegate: AnyObject {
 /// **ARKit mode** (`setupForARKit`):
 ///   ARKit owns the camera. HeadPoseService calls `writePixelBuffer(_:timestamp:)`
 ///   for each ARFrame. This avoids two camera sessions fighting for the sensor.
+///   The pixel buffer passed in is a COPY made by HeadPoseService (ARC-managed).
 ///
 /// **Standalone mode** (`setupStandalone`):
 ///   VideoCaptureService runs its own AVCaptureSession. Used when ARKit is unavailable.
-///
-/// In both modes, video is written via AVAssetWriter and per-frame timestamps
-/// are recorded from actual CMTime presentation times (not estimated).
 final class VideoCaptureService: NSObject {
     
     // MARK: - Configuration
@@ -43,7 +41,9 @@ final class VideoCaptureService: NSObject {
     private var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor?
     
     private var isWriting = false
+    private var writerSessionStarted = false
     private var sessionStartTime: CMTime?
+    private var monotonicStartNs: Int64?
     private var recordingStartEpochMs: Double = 0
     
     private let writerQueue = DispatchQueue(label: "com.egocapture.videowriter", qos: .userInteractive)
@@ -64,14 +64,23 @@ final class VideoCaptureService: NSObject {
     // MARK: - ARKit Mode Setup
     
     /// Configure for receiving pixel buffers from ARKit (no AVCaptureSession needed).
-    func setupForARKit() {
-        // No capture session — ARKit provides the camera feed.
-        // Resolution is determined from first received pixel buffer.
+    /// Pre-creates the asset writer with the expected resolution.
+    func setupForARKit(width: Int = 1920, height: Int = 1080, pixelFormat: OSType = kCVPixelFormatType_420YpCbCr8BiPlanarFullRange) {
+        actualResolutionWidth = width
+        actualResolutionHeight = height
+        detectedPixelFormat = pixelFormat
+        
+        // Pre-create asset writer NOW, not lazily.
+        do {
+            try createAssetWriter(width: width, height: height)
+            print("[VideoCaptureService] ARKit mode: writer pre-created (\(width)x\(height))")
+        } catch {
+            print("[VideoCaptureService] Failed to pre-create asset writer: \(error)")
+        }
     }
     
     // MARK: - Standalone Mode Setup
     
-    /// Configure with own AVCaptureSession (when ARKit is not available).
     func setupStandalone() throws {
         let session = AVCaptureSession()
         session.sessionPreset = .high
@@ -80,7 +89,6 @@ final class VideoCaptureService: NSObject {
             throw CaptureError.cameraNotAvailable
         }
         
-        // Configure for 30 FPS with best format >= 2MP
         try camera.lockForConfiguration()
         
         if let bestFormat = camera.formats.filter({ format in
@@ -111,13 +119,15 @@ final class VideoCaptureService: NSObject {
         guard session.canAddOutput(output) else { throw CaptureError.cannotAddOutput }
         session.addOutput(output)
         
-        // Landscape orientation
         if let connection = output.connection(with: .video),
            connection.isVideoRotationAngleSupported(0) {
             connection.videoRotationAngle = 0
         }
         
         self.captureSession = session
+        
+        detectedPixelFormat = kCVPixelFormatType_32BGRA
+        try createAssetWriter(width: actualResolutionWidth, height: actualResolutionHeight)
     }
     
     // MARK: - Recording
@@ -130,20 +140,30 @@ final class VideoCaptureService: NSObject {
         droppedFrames = 0
         videoTimestamps = []
         sessionStartTime = nil
+        writerSessionStarted = false
         
-        // Asset writer created lazily on first frame (need resolution)
+        // Recreate asset writer (file was just removed)
+        if assetWriter == nil || assetWriter?.status == .unknown {
+            do {
+                try createAssetWriter(width: actualResolutionWidth, height: actualResolutionHeight)
+            } catch {
+                print("[VideoCaptureService] Asset writer recreation failed: \(error)")
+            }
+        }
+        
         isWriting = true
-        
-        // Start standalone capture session if present
         captureSession?.startRunning()
+        print("[VideoCaptureService] Recording started")
     }
     
-    /// Called by HeadPoseService in ARKit mode to feed pixel buffers.
-    func writePixelBuffer(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime) {
+    /// Called by HeadPoseService in ARKit mode to feed COPIED pixel buffers.
+    /// The buffer is an ARC-managed copy — no manual retain/release needed.
+    /// This method dispatches to writerQueue and returns immediately.
+    func writePixelBuffer(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime, sourceTimestampNs: Int64? = nil) {
         guard isWriting else { return }
         
         writerQueue.async { [weak self] in
-            self?.processPixelBuffer(pixelBuffer, timestamp: timestamp)
+            self?.processPixelBuffer(pixelBuffer, timestamp: timestamp, sourceTimestampNs: sourceTimestampNs)
         }
     }
     
@@ -159,6 +179,7 @@ final class VideoCaptureService: NSObject {
                 }
                 self.assetWriterInput?.markAsFinished()
                 writer.finishWriting {
+                    print("[VideoCaptureService] Finished. Frames: \(self.frameIndex), dropped: \(self.droppedFrames)")
                     continuation.resume(returning: self.outputURL)
                 }
             }
@@ -167,50 +188,66 @@ final class VideoCaptureService: NSObject {
     
     // MARK: - Internal Frame Processing
     
-    private func processPixelBuffer(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime) {
-        // Lazily create asset writer on first frame
-        if assetWriter == nil {
-            let width = CVPixelBufferGetWidth(pixelBuffer)
-            let height = CVPixelBufferGetHeight(pixelBuffer)
-            actualResolutionWidth = width
-            actualResolutionHeight = height
-            detectedPixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer)
+    private func processPixelBuffer(_ pixelBuffer: CVPixelBuffer, timestamp: CMTime, sourceTimestampNs: Int64? = nil) {
+        guard let writer = assetWriter else {
+            droppedFrames += 1
+            return
+        }
+        
+        // Start writer session on first frame
+        if !writerSessionStarted {
+            sessionStartTime = timestamp
             
-            do {
-                try createAssetWriter(width: width, height: height)
-            } catch {
-                print("[VideoCaptureService] Asset writer creation failed: \(error)")
+            if writer.status == .unknown {
+                writer.startWriting()
+            }
+            
+            if writer.status == .writing {
+                writer.startSession(atSourceTime: timestamp)
+                writerSessionStarted = true
+                print("[VideoCaptureService] Writer session started at \(CMTimeGetSeconds(timestamp))s")
+            } else {
+                print("[VideoCaptureService] Writer status \(writer.status.rawValue), error: \(writer.error?.localizedDescription ?? "none")")
+                droppedFrames += 1
                 return
             }
         }
         
-        // Initialize session on first frame
-        if sessionStartTime == nil {
-            sessionStartTime = timestamp
-            assetWriter?.startWriting()
-            assetWriter?.startSession(atSourceTime: timestamp)
+        if writer.status != .writing {
+            if frameIndex < 10 {
+                print("[VideoCaptureService] Writer not writing: \(writer.status.rawValue)")
+            }
+            droppedFrames += 1
+            return
         }
         
         let currentIndex = frameIndex
         frameIndex += 1
+        let frameTimestampNs = sourceTimestampNs ?? Int64(DispatchTime.now().uptimeNanoseconds)
+        if monotonicStartNs == nil {
+            monotonicStartNs = frameTimestampNs
+        }
         
-        // Compute timestamps
         let relativeSec = CMTimeGetSeconds(timestamp) - CMTimeGetSeconds(sessionStartTime!)
         let relativeMs = relativeSec * 1000.0
         let epochMs = recordingStartEpochMs + relativeMs
         
-        // Record timestamp (from actual CMTime, not estimated)
         videoTimestamps.append(VideoTimestamp(
             frameIndex: currentIndex,
+            timestampNs: frameTimestampNs,
             timestampEpochMs: epochMs,
             relativeMs: relativeMs,
             presentationTimeSec: CMTimeGetSeconds(timestamp),
             isEstimated: false
         ))
         
-        // Write frame to MP4
+        // Write frame
         if let adaptor = pixelBufferAdaptor, adaptor.assetWriterInput.isReadyForMoreMediaData {
-            adaptor.append(pixelBuffer, withPresentationTime: timestamp)
+            let success = adaptor.append(pixelBuffer, withPresentationTime: timestamp)
+            if !success && currentIndex < 10 {
+                print("[VideoCaptureService] append failed at frame \(currentIndex): \(writer.error?.localizedDescription ?? "?")")
+                droppedFrames += 1
+            }
         } else {
             droppedFrames += 1
         }
@@ -227,6 +264,12 @@ final class VideoCaptureService: NSObject {
     private var detectedPixelFormat: OSType = kCVPixelFormatType_32BGRA
     
     private func createAssetWriter(width: Int, height: Int) throws {
+        assetWriter = nil
+        assetWriterInput = nil
+        pixelBufferAdaptor = nil
+        
+        try? FileManager.default.removeItem(at: outputURL)
+        
         let writer = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
         
         let videoSettings: [String: Any] = [
@@ -236,14 +279,13 @@ final class VideoCaptureService: NSObject {
             AVVideoCompressionPropertiesKey: [
                 AVVideoAverageBitRateKey: targetBitrate,
                 AVVideoMaxKeyFrameIntervalKey: gopLength,
-                AVVideoAllowFrameReorderingKey: false  // No B-frames
+                AVVideoAllowFrameReorderingKey: false
             ]
         ]
         
         let writerInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
         writerInput.expectsMediaDataInRealTime = true
         
-        // Use the actual pixel format from the source (BGRA from standalone, 420v from ARKit)
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(
             assetWriterInput: writerInput,
             sourcePixelBufferAttributes: [
@@ -286,7 +328,8 @@ extension VideoCaptureService: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-        processPixelBuffer(pixelBuffer, timestamp: timestamp)
+        let timestampNs = Int64(DispatchTime.now().uptimeNanoseconds)
+        processPixelBuffer(pixelBuffer, timestamp: timestamp, sourceTimestampNs: timestampNs)
     }
     
     func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {

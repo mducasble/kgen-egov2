@@ -14,6 +14,7 @@ struct SessionMetadata: Codable {
     let semanticArtifacts: SemanticArtifactInfo
     let imuMetrics: IMUMetrics
     let videoMetrics: VideoMetrics
+    let syncMetrics: SyncMetrics?
     let qcSummary: QCSummary?
     let warnings: [String]
     
@@ -72,6 +73,15 @@ struct SessionMetadata: Codable {
         let totalFrames: Int
         let actualAvgFPS: Double
         let droppedFrames: Int
+    }
+
+    struct SyncMetrics: Codable {
+        let videoToHeadPoseAvgDeltaMs: Double
+        let videoToHeadPoseMaxDeltaMs: Double
+        let videoToHeadPoseP95DeltaMs: Double
+        let videoToHeadPoseMappingMode: String
+        let videoToHeadPoseInterpolatedPercent: Double
+        let videoToHeadPoseFallbackPercent: Double
     }
     
     /// Create device info from current device

@@ -10,6 +10,7 @@ import Foundation
 struct HandLandmarkSample: Codable {
     let timestampEpochMs: Double
     let relativeMs: Double
+    let timestampNs: UInt64
     let frameIndex: Int
     let hands: [DetectedHand]
     
@@ -18,6 +19,8 @@ struct HandLandmarkSample: Codable {
         let handedness: String
         /// Detection confidence [0.0, 1.0]
         let confidence: Double
+        /// Backend source identifier ("apple_vision" or "mediapipe")
+        let source: String
         /// 21 landmarks per hand
         let landmarks: [Landmark]
     }

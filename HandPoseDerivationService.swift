@@ -14,9 +14,11 @@ final class HandPoseDerivationService {
     
     /// Whether the source landmarks have true 3D data
     private let has3DLandmarks: Bool
+    private let sourceName: String
     
-    init(has3DLandmarks: Bool) {
+    init(has3DLandmarks: Bool, sourceName: String = "apple_vision") {
         self.has3DLandmarks = has3DLandmarks
+        self.sourceName = sourceName
     }
     
     func start(outputURL: URL, epochStartMs: Double) throws {
@@ -33,6 +35,7 @@ final class HandPoseDerivationService {
                 hand: hand,
                 timestampEpochMs: sample.timestampEpochMs,
                 relativeMs: sample.relativeMs,
+                timestampNs: sample.timestampNs,
                 frameIndex: sample.frameIndex
             )
             
@@ -52,6 +55,7 @@ final class HandPoseDerivationService {
         hand: HandLandmarkSample.DetectedHand,
         timestampEpochMs: Double,
         relativeMs: Double,
+        timestampNs: UInt64,
         frameIndex: Int
     ) -> HandPoseSample {
         
@@ -77,9 +81,11 @@ final class HandPoseDerivationService {
         return HandPoseSample(
             timestampEpochMs: timestampEpochMs,
             relativeMs: relativeMs,
+            timestampNs: timestampNs,
             frameIndex: frameIndex,
             handedness: hand.handedness,
             confidence: hand.confidence,
+            source: sourceName,
             wrist: wrist,
             fingertips: fingertips,
             jointAnglesDeg: jointAngles,

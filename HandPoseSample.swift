@@ -6,11 +6,14 @@ import Foundation
 struct HandPoseSample: Codable {
     let timestampEpochMs: Double
     let relativeMs: Double
+    let timestampNs: UInt64
     let frameIndex: Int
     /// "left", "right", or "unknown"
     let handedness: String
     /// Detection confidence [0.0, 1.0]
     let confidence: Double
+    /// Backend source identifier ("apple_vision" or "mediapipe")
+    let source: String
     /// Wrist position (normalized image coords or relative 3D)
     let wrist: Point3D
     /// Fingertip positions
