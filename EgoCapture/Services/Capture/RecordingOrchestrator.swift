@@ -4,8 +4,8 @@ import CoreVideo
 import AVFoundation
 import CoreImage
 
-private let kPipelineVersion = "4.1.0"
-private let kPipelineBuild = "context-mode-optimized"
+private let kPipelineVersion = "4.2.0"
+private let kPipelineBuild = "context-mode-maxfov"
 
 fileprivate final class VisionCaptureBridge: @unchecked Sendable {
     let visionStride: Int
@@ -365,6 +365,8 @@ final class RecordingOrchestrator: ObservableObject {
         let selectedFormatDescription = videoCaptureService?.selectedFormatDescription ?? "unknown"
         let usedUltraWide = videoCaptureService?.usedUltraWide ?? false
         let exposurePolicy = videoCaptureService?.exposurePolicy ?? "default"
+        let fovMode = videoCaptureService?.fovMode ?? "hardware"
+        let fovTargetAchieved = videoCaptureService?.fovTargetAchieved ?? false
 
         let appleProcessed = handLandmarkService?.processedFrameCount ?? 0
         let mediaPipeProcessed = handLandmarkMediaPipeService?.processedFrameCount ?? 0
@@ -381,8 +383,13 @@ final class RecordingOrchestrator: ObservableObject {
         }
         if imuVideoSync.confidence == "low" { warnings.append("IMU↔video sync confidence is low.") }
         if !usedUltraWide { warnings.append("Ultra-wide camera not available; fell back to wide.") }
-        if let fov = cameraActualFovDeg, fov < 100 {
-            warnings.append("actualFovDeg=\(String(format: "%.1f", fov))° is below 100° context-mode target.")
+        if let fov = cameraActualFovDeg {
+            if fov < 110 {
+                warnings.append("actualFovDeg=\(String(format: "%.1f", fov))° is below expected ultra-wide range (≥110°).")
+            }
+            if fov >= 120 {
+                warnings.append("wide_fov_target_achieved: actualFovDeg=\(String(format: "%.1f", fov))° ≥ 120°")
+            }
         }
         if appleProcessed == 0 {
             warnings.append("Apple Vision fallback processed 0 frames; fallback coverage is 0.")
@@ -447,7 +454,9 @@ final class RecordingOrchestrator: ObservableObject {
             ),
             camera: SessionMetadata.CameraInfo(
                 selectedLens: selectedLens, actualFovDeg: cameraActualFovDeg,
-                fovSource: cameraFovSource, selectedFormatDescription: selectedFormatDescription,
+                fovSource: cameraFovSource, fovMode: fovMode,
+                fovTargetAchieved: fovTargetAchieved,
+                selectedFormatDescription: selectedFormatDescription,
                 usedUltraWide: usedUltraWide, exposurePolicy: exposurePolicy
             ),
             captureProfile: SessionMetadata.CaptureProfile(
@@ -572,7 +581,11 @@ final class RecordingOrchestrator: ObservableObject {
 
         // Context Mode validation targets
         if !usedUltraWide { issues.append("WARN: usedUltraWide=false") }
-        if let fov = actualFovDeg, fov < 100 { issues.append("WARN: actualFovDeg=\(String(format: "%.1f", fov))° < 100°") }
+        if let fov = actualFovDeg {
+            if fov < 105 { issues.append("WARN: actualFovDeg=\(String(format: "%.1f", fov))° < 105° minimum") }
+            else if fov < 110 { issues.append("INFO: actualFovDeg=\(String(format: "%.1f", fov))° below 110° target") }
+            if fov >= 120 { issues.append("OK: wide_fov_target_achieved (\(String(format: "%.1f", fov))°)") }
+        }
         if droppedFrames > 5 { issues.append("WARN: droppedFrames=\(droppedFrames) > 5") }
         if avgFPS < 25 { issues.append("WARN: actualAvgFPS=\(String(format: "%.1f", avgFPS)) < 25") }
         if mediaPipeCoverage < 85 { issues.append("WARN: mediaPipeCoverage=\(String(format: "%.1f", mediaPipeCoverage))% < 85%") }
