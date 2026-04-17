@@ -14,11 +14,6 @@ struct SettingsView: View {
     @AppStorage("selected_hand_tracking_backend") private var handTrackingBackend = HandTrackingBackendType.appleVision.rawValue
     @AppStorage("mediapipe_model_path") private var mediaPipeModelPath = "hand_landmarker.task"
 
-    @AppStorage("s3_bucket") private var s3Bucket = "kaivideo"
-    @AppStorage("s3_region") private var s3Region = "us-east-1"
-    @AppStorage("s3_access_key") private var s3AccessKey = ""
-    @AppStorage("s3_secret_key") private var s3SecretKey = ""
-
     var body: some View {
         ZStack {
             LinearGradient(
@@ -51,80 +46,38 @@ struct SettingsView: View {
     // MARK: - Sections
 
     private var awsSection: some View {
-        GlassSection(title: "S3 UPLOAD", icon: "icloud.and.arrow.up") {
-            VStack(spacing: 14) {
+        let cfg = S3Config.embedded()
+        return GlassSection(title: "S3 UPLOAD", icon: "icloud.and.arrow.up") {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("Bucket")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer()
-                    TextField("bucket-name", text: $s3Bucket)
+                    Text(cfg.bucket)
                         .font(.subheadline.monospaced())
-                        .foregroundStyle(.white.opacity(0.85))
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 160)
+                        .foregroundStyle(.white.opacity(0.5))
                 }
-
                 HStack {
                     Text("Region")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer()
-                    TextField("us-east-1", text: $s3Region)
+                    Text(cfg.region)
                         .font(.subheadline.monospaced())
-                        .foregroundStyle(.white.opacity(0.85))
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 160)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Access Key ID")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
-                    SecureField("AKIA...", text: $s3AccessKey)
-                        .font(.subheadline.monospaced())
-                        .foregroundStyle(.white.opacity(0.85))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(.white.opacity(0.04))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(.white.opacity(0.06), lineWidth: 0.5)
-                                )
-                        }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Secret Access Key")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
-                    SecureField("wJalrXUtnFEMI...", text: $s3SecretKey)
-                        .font(.subheadline.monospaced())
-                        .foregroundStyle(.white.opacity(0.85))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(.white.opacity(0.04))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(.white.opacity(0.06), lineWidth: 0.5)
-                                )
-                        }
+                        .foregroundStyle(.white.opacity(0.5))
                 }
 
                 HStack(spacing: 6) {
-                    Image(systemName: s3AccessKey.isEmpty || s3SecretKey.isEmpty ? "xmark.circle" : "checkmark.circle.fill")
-                        .foregroundStyle(s3AccessKey.isEmpty || s3SecretKey.isEmpty ? .red.opacity(0.5) : .green.opacity(0.6))
+                    Image(systemName: cfg.isValid ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
+                        .foregroundStyle(cfg.isValid ? .green.opacity(0.6) : .orange.opacity(0.7))
                         .font(.caption)
-                    Text(s3AccessKey.isEmpty || s3SecretKey.isEmpty ? "Credentials required for auto-upload" : "Credentials configured")
+                    Text(cfg.isValid ? "Credentials embedded in app build" : "Set keys in EmbeddedAWSCredentials.swift before build")
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.white.opacity(0.35))
                 }
 
-                Text("Sessions are uploaded automatically after recording. Video is split into ≤2 min chunks.")
+                Text("Sessions upload automatically after recording (≤2 min video chunks). Keys are not shown to contributors.")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.2))
             }

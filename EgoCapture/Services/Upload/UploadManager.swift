@@ -30,7 +30,7 @@ final class UploadManager: ObservableObject {
     func startUpload(sessionId: String, sessionDir: URL) {
         guard uploadTasks[sessionId] == nil else { return }
 
-        let config = S3Config.fromUserDefaults()
+        let config = S3Config.embedded()
         guard config.isValid else {
             print("[UploadManager] S3 credentials not configured — skipping upload for \(sessionId.prefix(8))")
             return
@@ -53,7 +53,7 @@ final class UploadManager: ObservableObject {
 
         guard var state = UploadStateManager.load(sessionDir: sessionDir) else { return }
 
-        let config = S3Config.fromUserDefaults()
+        let config = S3Config.embedded()
         guard config.isValid else { return }
 
         for i in state.files.indices where state.files[i].status == .failed {
@@ -211,7 +211,7 @@ final class UploadManager: ObservableObject {
     // MARK: - Resume on App Launch
 
     private func resumePendingUploads() {
-        let config = S3Config.fromUserDefaults()
+        let config = S3Config.embedded()
         guard config.isValid else { return }
 
         let sessions = SessionManager.shared.listSessions()
