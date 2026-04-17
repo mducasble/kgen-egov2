@@ -13,6 +13,9 @@ struct SessionMetadata: Codable {
     let camera: CameraInfo
     let captureProfile: CaptureProfile
     let signalConfiguration: SignalConfiguration
+    let collector: Collector
+    let videoEncoding: VideoEncoding
+    let colorProfile: ColorProfile
     let imuMetrics: IMUMetrics
     let videoMetrics: VideoMetrics
     let syncMetrics: SyncMetrics
@@ -48,6 +51,8 @@ struct SessionMetadata: Codable {
         let fovMode: String?
         let fovLimitReached: Bool?
         let fovLimitReason: String?
+        let fovCompliance: String?
+        let fovNote: String?
         let selectedFormatDescription: String
         let usedUltraWide: Bool?
         let exposurePolicy: String?
@@ -65,6 +70,30 @@ struct SessionMetadata: Codable {
         let poseIncluded: Bool
         let imuIncluded: Bool
         let handTrackingIncluded: Bool
+    }
+
+    struct Collector: Codable {
+        let collectorId: String
+        let collectorType: String
+        let collectionMode: String
+    }
+
+    struct VideoEncoding: Codable {
+        let codec: String
+        let bitrateMbps: Double
+        let gopLength: Int
+        let bFrames: Int
+        let profile: String
+        let colorDepth: String
+        let hdr: Bool
+        let encodingCompliant: Bool
+    }
+
+    struct ColorProfile: Codable {
+        let hdrEnabled: Bool
+        let colorDepth: String
+        let colorSpace: String
+        let note: String
     }
 
     struct IMUMetrics: Codable {
@@ -134,6 +163,11 @@ struct SessionMetadata: Codable {
         let extrinsicsIncluded: Bool
         let intrinsicsType: String
         let extrinsicsType: String
+        let encodingCompliant: Bool
+        let colorCompliant: Bool
+        let syncCompliant: Bool
+        let imuCompliant: Bool
+        let fovCompliant: Bool
         let notes: [String]
     }
 

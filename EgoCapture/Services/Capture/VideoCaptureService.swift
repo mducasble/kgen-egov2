@@ -22,7 +22,7 @@ protocol VideoCaptureDelegate: AnyObject {
 final class VideoCaptureService: NSObject {
     let outputURL: URL
     let targetFPS: Int = 30
-    private let targetBitrate: Int = 6_000_000
+    let targetBitrate: Int = 6_000_000
     private let gopLength: Int = 30
     private let clock = MonotonicClock.shared
 

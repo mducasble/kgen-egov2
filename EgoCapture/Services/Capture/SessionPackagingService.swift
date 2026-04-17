@@ -28,8 +28,8 @@ final class SessionPackagingService {
             case "imu.jsonl": type = "jsonl"; description = "Synchronized accelerometer + gyroscope at ~100Hz"; rowCount = countLines(at: fileURL)
             case "video_timestamps.jsonl": type = "jsonl"; description = "Per-frame video timestamps (monotonic + epoch)"; rowCount = countLines(at: fileURL)
             case "camera_format_diagnostics.json": type = "json"; description = "All available camera formats with FOV and resolution details"
-            case "metadata.json": type = "json"; description = "Session metadata: IMU-only mode with standardized camera intrinsics/extrinsics, capture config, sync metrics, and validation"
-            case "technical_validation.json": type = "json"; description = "Machine-readable technical quality report with pass/fail criteria and calibration status"
+            case "metadata.json": type = "json"; description = "Session metadata: IMU-only mode with camera intrinsics/extrinsics, encoding compliance, collector ID, color profile, sync metrics, and spec compliance summary"
+            case "technical_validation.json": type = "json"; description = "Machine-readable technical quality report with pass/fail criteria, encoding validation, calibration status, and sync health"
             default: type = fileURL.pathExtension; description = "Additional artifact"
             }
 

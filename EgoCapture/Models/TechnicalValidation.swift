@@ -6,6 +6,7 @@ struct TechnicalValidation: Codable {
     let timing: Timing
     let imu: IMU
     let video: Video
+    let videoEncoding: VideoEncoding
     let calibration: Calibration
     let passCriteria: PassCriteria
 
@@ -30,6 +31,14 @@ struct TechnicalValidation: Codable {
         let droppedFrames: Int
     }
 
+    struct VideoEncoding: Codable {
+        let bitrateMbps: Double
+        let gopLength: Int
+        let bFrames: Int
+        let hdr: Bool
+        let encodingValid: Bool
+    }
+
     struct Calibration: Codable {
         let intrinsicsAvailable: Bool
         let distortionAvailable: Bool
@@ -44,5 +53,6 @@ struct TechnicalValidation: Codable {
         let imuStable: Bool
         let syncAcceptable: Bool
         let calibrationAcceptable: Bool
+        let encodingAcceptable: Bool
     }
 }
