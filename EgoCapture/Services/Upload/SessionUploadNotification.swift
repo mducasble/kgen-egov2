@@ -1,7 +1,6 @@
 import Foundation
 
-extension Notification.Name {
-    /// Posted when a session is finalized on disk and should be queued for S3 upload.
-    /// `userInfo`: `sessionId` (String), `sessionDir` (URL)
-    static let egocaptureSessionReadyForUpload = Notification.Name("egocaptureSessionReadyForUpload")
+/// Shared notification name for the S3 upload pipeline (avoids `Notification.Name` extension clashes).
+enum UploadNotificationName {
+    static let sessionReady = Notification.Name("egocaptureSessionReadyForUpload")
 }

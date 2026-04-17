@@ -93,7 +93,7 @@ final class RecordingOrchestrator: ObservableObject {
             statusMessage = "Session saved"
             if let dir = uploadDir, let id = uploadId {
                 NotificationCenter.default.post(
-                    name: .egocaptureSessionReadyForUpload,
+                    name: UploadNotificationName.sessionReady,
                     object: nil,
                     userInfo: ["sessionId": id, "sessionDir": dir]
                 )

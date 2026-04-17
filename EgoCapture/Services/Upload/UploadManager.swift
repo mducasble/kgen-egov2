@@ -25,7 +25,7 @@ final class UploadManager: ObservableObject {
     private init() {
         resumePendingUploads()
         sessionReadyObserver = NotificationCenter.default.addObserver(
-            forName: .egocaptureSessionReadyForUpload,
+            forName: UploadNotificationName.sessionReady,
             object: nil,
             queue: .main
         ) { [weak self] notification in

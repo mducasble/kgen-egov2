@@ -42,7 +42,7 @@
 		AA000061 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000061 /* SessionManager.swift */; };
 		AA000070 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB000070 /* Assets.xcassets */; };
 		AA000006 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000006 /* CameraPreviewView.swift */; };
-		AA000080 /* S3Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000080 /* S3Config.swift */; };
+		AA000080 /* S3Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000088 /* S3Config.swift */; };
 		AA000081 /* AWSSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000081 /* AWSSigner.swift */; };
 		AA000082 /* VideoChunkingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000082 /* VideoChunkingService.swift */; };
 		AA000083 /* UploadState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000083 /* UploadState.swift */; };
@@ -95,7 +95,7 @@
 		AC000001 /* EgoCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EgoCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA100002 /* hand_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = hand_landmarker.task; sourceTree = "<group>"; };
 		EFFC6E6639E6CD6374415719 /* Pods-EgoCapture.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EgoCapture.release.xcconfig"; path = "Target Support Files/Pods-EgoCapture/Pods-EgoCapture.release.xcconfig"; sourceTree = "<group>"; };
-		AB000080 /* S3Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3Config.swift; sourceTree = "<group>"; };
+		AB000088 /* S3Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3Config.swift; sourceTree = "<group>"; };
 		AB000081 /* AWSSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AWSSigner.swift; sourceTree = "<group>"; };
 		AB000082 /* VideoChunkingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoChunkingService.swift; sourceTree = "<group>"; };
 		AB000083 /* UploadState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadState.swift; sourceTree = "<group>"; };
@@ -241,7 +241,7 @@
 		AE000010 /* Upload */ = {
 			isa = PBXGroup;
 			children = (
-				AB000080 /* S3Config.swift */,
+				AB000088 /* S3Config.swift */,
 				AB000081 /* AWSSigner.swift */,
 				AB000082 /* VideoChunkingService.swift */,
 				AB000083 /* UploadState.swift */,
