@@ -49,6 +49,7 @@
 		AA000084 /* S3UploadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000084 /* S3UploadService.swift */; };
 		AA000085 /* UploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000085 /* UploadManager.swift */; };
 		AA000086 /* EmbeddedAWSCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000086 /* EmbeddedAWSCredentials.swift */; };
+		AA000087 /* SessionUploadNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000087 /* SessionUploadNotification.swift */; };
 		BA100001 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = BA100002 /* hand_landmarker.task */; };
 /* End PBXBuildFile section */
 
@@ -101,6 +102,7 @@
 		AB000084 /* S3UploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3UploadService.swift; sourceTree = "<group>"; };
 		AB000085 /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
 		AB000086 /* EmbeddedAWSCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedAWSCredentials.swift; sourceTree = "<group>"; };
+		AB000087 /* SessionUploadNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUploadNotification.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -246,6 +248,7 @@
 				AB000084 /* S3UploadService.swift */,
 				AB000085 /* UploadManager.swift */,
 				AB000086 /* EmbeddedAWSCredentials.swift */,
+				AB000087 /* SessionUploadNotification.swift */,
 			);
 			path = Upload;
 			sourceTree = "<group>";
@@ -415,6 +418,7 @@
 				AA000084 /* S3UploadService.swift in Sources */,
 				AA000085 /* UploadManager.swift in Sources */,
 				AA000086 /* EmbeddedAWSCredentials.swift in Sources */,
+				AA000087 /* SessionUploadNotification.swift in Sources */,
 				AA000010 /* IMUSample.swift in Sources */,
 				AA000011 /* HeadPoseSample.swift in Sources */,
 				AA000012 /* CameraCalibration.swift in Sources */,

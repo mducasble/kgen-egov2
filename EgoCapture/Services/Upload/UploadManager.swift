@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Orchestrates the full upload pipeline: chunk → upload → cleanup.
 /// Singleton; manages concurrent uploads across sessions.
@@ -10,6 +11,7 @@ final class UploadManager: ObservableObject {
     @Published var activeUploads: [String: UploadState] = [:]
 
     private var uploadTasks: [String: Task<Void, Never>] = [:]
+    private var sessionReadyObserver: NSObjectProtocol?
 
     private let metadataFiles = [
         "imu.jsonl",
@@ -22,6 +24,17 @@ final class UploadManager: ObservableObject {
 
     private init() {
         resumePendingUploads()
+        sessionReadyObserver = NotificationCenter.default.addObserver(
+            forName: .egocaptureSessionReadyForUpload,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let sessionId = notification.userInfo?["sessionId"] as? String,
+                  let sessionDir = notification.userInfo?["sessionDir"] as? URL else { return }
+            Task { @MainActor in
+                self?.startUpload(sessionId: sessionId, sessionDir: sessionDir)
+            }
+        }
     }
 
     // MARK: - Public API
