@@ -42,6 +42,12 @@
 		AA000061 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000061 /* SessionManager.swift */; };
 		AA000070 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB000070 /* Assets.xcassets */; };
 		AA000006 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000006 /* CameraPreviewView.swift */; };
+		AA000080 /* S3Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000080 /* S3Config.swift */; };
+		AA000081 /* AWSSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000081 /* AWSSigner.swift */; };
+		AA000082 /* VideoChunkingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000082 /* VideoChunkingService.swift */; };
+		AA000083 /* UploadState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000083 /* UploadState.swift */; };
+		AA000084 /* S3UploadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000084 /* S3UploadService.swift */; };
+		AA000085 /* UploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000085 /* UploadManager.swift */; };
 		BA100001 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = BA100002 /* hand_landmarker.task */; };
 /* End PBXBuildFile section */
 
@@ -87,6 +93,12 @@
 		AC000001 /* EgoCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EgoCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA100002 /* hand_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = hand_landmarker.task; sourceTree = "<group>"; };
 		EFFC6E6639E6CD6374415719 /* Pods-EgoCapture.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EgoCapture.release.xcconfig"; path = "Target Support Files/Pods-EgoCapture/Pods-EgoCapture.release.xcconfig"; sourceTree = "<group>"; };
+		AB000080 /* S3Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3Config.swift; sourceTree = "<group>"; };
+		AB000081 /* AWSSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AWSSigner.swift; sourceTree = "<group>"; };
+		AB000082 /* VideoChunkingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoChunkingService.swift; sourceTree = "<group>"; };
+		AB000083 /* UploadState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadState.swift; sourceTree = "<group>"; };
+		AB000084 /* S3UploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3UploadService.swift; sourceTree = "<group>"; };
+		AB000085 /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -161,6 +173,7 @@
 				AE000005 /* Capture */,
 				AE000006 /* Vision */,
 				AE000009 /* Packaging */,
+				AE000010 /* Upload */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -219,6 +232,19 @@
 				AB000050 /* SessionPackagingService.swift */,
 			);
 			path = Packaging;
+			sourceTree = "<group>";
+		};
+		AE000010 /* Upload */ = {
+			isa = PBXGroup;
+			children = (
+				AB000080 /* S3Config.swift */,
+				AB000081 /* AWSSigner.swift */,
+				AB000082 /* VideoChunkingService.swift */,
+				AB000083 /* UploadState.swift */,
+				AB000084 /* S3UploadService.swift */,
+				AB000085 /* UploadManager.swift */,
+			);
+			path = Upload;
 			sourceTree = "<group>";
 		};
 		AE000099 /* Products */ = {
@@ -379,6 +405,12 @@
 				AA000004 /* SessionListView.swift in Sources */,
 				AA000005 /* SettingsView.swift in Sources */,
 				AA000006 /* CameraPreviewView.swift in Sources */,
+				AA000080 /* S3Config.swift in Sources */,
+				AA000081 /* AWSSigner.swift in Sources */,
+				AA000082 /* VideoChunkingService.swift in Sources */,
+				AA000083 /* UploadState.swift in Sources */,
+				AA000084 /* S3UploadService.swift in Sources */,
+				AA000085 /* UploadManager.swift in Sources */,
 				AA000010 /* IMUSample.swift in Sources */,
 				AA000011 /* HeadPoseSample.swift in Sources */,
 				AA000012 /* CameraCalibration.swift in Sources */,

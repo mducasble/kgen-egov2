@@ -86,7 +86,15 @@ final class RecordingOrchestrator: ObservableObject {
         guard isRecording else { return }
         isRecording = false; statusMessage = "Finalizing..."
         durationTimer?.invalidate(); durationTimer = nil
-        Task { await finalizeSession(); statusMessage = "Session saved" }
+        let uploadDir = sessionDir
+        let uploadId = currentSessionId
+        Task {
+            await finalizeSession()
+            statusMessage = "Session saved"
+            if let dir = uploadDir, let id = uploadId {
+                UploadManager.shared.startUpload(sessionId: id, sessionDir: dir)
+            }
+        }
     }
 
     // MARK: - Audio

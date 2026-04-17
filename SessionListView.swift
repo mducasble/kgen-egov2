@@ -3,6 +3,7 @@ import UIKit
 
 struct SessionListView: View {
     @State private var sessions: [(id: String, directory: URL, date: Date)] = []
+    @ObservedObject private var uploadManager = UploadManager.shared
 
     var body: some View {
         ZStack {
@@ -20,6 +21,16 @@ struct SessionListView: View {
                                 sessionRow(session)
                             }
                             .contextMenu {
+                                if let state = uploadManager.activeUploads[session.id], state.hasFailures {
+                                    Button {
+                                        uploadManager.retryUpload(sessionId: session.id)
+                                    } label: {
+                                        Label("Retry Upload", systemImage: "arrow.clockwise")
+                                    }
+                                }
+
+                                let isUploading = uploadManager.activeUploads[session.id]?.status == .uploading
+                                    || uploadManager.activeUploads[session.id]?.status == .chunking
                                 Button(role: .destructive) {
                                     withAnimation {
                                         try? SessionManager.shared.deleteSession(id: session.id)
@@ -28,6 +39,7 @@ struct SessionListView: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                .disabled(isUploading)
                             }
                         }
                     }
@@ -110,6 +122,8 @@ struct SessionListView: View {
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.4))
                 }
+
+                uploadBadge(for: session.id)
             }
 
             Spacer()
@@ -135,6 +149,55 @@ struct SessionListView: View {
         f.dateStyle = .medium
         f.timeStyle = .short
         return f.string(from: date)
+    }
+
+    @ViewBuilder
+    private func uploadBadge(for sessionId: String) -> some View {
+        let state = uploadManager.activeUploads[sessionId] ?? uploadManager.loadState(sessionId: sessionId)
+
+        if let state {
+            HStack(spacing: 5) {
+                switch state.status {
+                case .chunking:
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .tint(.orange)
+                    Text("Preparing...")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.orange.opacity(0.8))
+
+                case .uploading:
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .tint(.blue)
+                    Text("\(state.completedFiles)/\(state.totalFiles)")
+                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(.blue.opacity(0.8))
+                    Text("uploading")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.blue.opacity(0.5))
+
+                case .completed:
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.green.opacity(0.7))
+                    Text("Uploaded")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.green.opacity(0.7))
+
+                case .failed, .partiallyFailed:
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.red.opacity(0.7))
+                    Text("\(state.failedFiles) failed")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.red.opacity(0.7))
+                    Text("· hold to retry")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.25))
+                }
+            }
+        }
     }
 
     private func formatSize(_ bytes: Int64) -> String {
