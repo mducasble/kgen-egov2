@@ -60,10 +60,10 @@ final class RecordingOrchestrator: ObservableObject {
 
         do {
             let imu = IMUCaptureService()
-            try imu.start(outputURL: dir.appendingPathComponent("imu.jsonl"), epochStartMs: recordingStartEpochMs)
+            try imu.start(outputURL: SessionFiles.url("imu", "jsonl", in: dir), epochStartMs: recordingStartEpochMs)
             imuCaptureService = imu
 
-            let video = VideoCaptureService(outputURL: dir.appendingPathComponent("video.mp4"))
+            let video = VideoCaptureService(outputURL: SessionFiles.url("video", "mp4", in: dir))
             video.delegate = self; videoCaptureService = video
             try video.setup()
             captureSession = video.captureSession
@@ -93,7 +93,7 @@ final class RecordingOrchestrator: ObservableObject {
             statusMessage = "Session saved"
             if let dir = uploadDir, let id = uploadId {
                 NotificationCenter.default.post(
-                    name: UploadNotificationName.sessionReady,
+                    name: Notification.Name("egocaptureSessionReadyForUpload"),
                     object: nil,
                     userInfo: ["sessionId": id, "sessionDir": dir]
                 )
@@ -126,7 +126,7 @@ final class RecordingOrchestrator: ObservableObject {
         let videoTS = videoCaptureService?.videoTimestamps ?? []
 
         if !videoTS.isEmpty {
-            do { let w = try JSONLWriter(fileURL: dir.appendingPathComponent("video_timestamps.jsonl")); for t in videoTS { w.append(t) }; w.close() } catch {}
+            do { let w = try JSONLWriter(fileURL: SessionFiles.url("video_timestamps", "jsonl", in: dir)); for t in videoTS { w.append(t) }; w.close() } catch {}
         }
 
         let imuVideoSync = SyncAnalysisService.computeIMUVideoSync(
@@ -175,8 +175,16 @@ final class RecordingOrchestrator: ObservableObject {
 
         // Camera intrinsics
         let deviceInfo = SessionMetadata.currentDeviceInfo()
+        let measuredIntrinsics = videoCaptureService?.intrinsicsSource == "avcapture_camera_intrinsic_matrix"
+        let intrinsicsModeValue = measuredIntrinsics
+            ? "measured_per_device"
+            : "standardized_per_device_format"
+        let intrinsicsSourceValue = measuredIntrinsics
+            ? "avcapture_camera_intrinsic_matrix"
+            : "pinhole_derived_from_fov"
+
         let cameraIntrinsics = SessionMetadata.CameraIntrinsics(
-            intrinsicsMode: "standardized_per_device_format",
+            intrinsicsMode: intrinsicsModeValue,
             deviceModel: deviceInfo.model,
             lens: selectedLens,
             resolution: SessionMetadata.CameraIntrinsics.Resolution(width: resW, height: resH),
@@ -190,10 +198,10 @@ final class RecordingOrchestrator: ObservableObject {
                 fx: videoCaptureService?.focalLengthFx,
                 fy: videoCaptureService?.focalLengthFy
             ),
-            intrinsicsSource: "device_format_standardization",
-            distortionModel: "unknown",
+            intrinsicsSource: intrinsicsSourceValue,
+            distortionModel: "apple_isp_corrected",
             distortionPresent: true,
-            distortionNote: "Ultra-wide lens; image may include Apple software correction. Exact distortion coefficients are not currently exported."
+            distortionNote: "Frames are geometrically pre-rectified by Apple's ISP before delivery. Residual distortion is small but unquantified; exact distortion coefficients are not exposed by AVFoundation in video capture mode."
         )
 
         // Camera extrinsics
@@ -280,7 +288,11 @@ final class RecordingOrchestrator: ObservableObject {
             collector: SessionMetadata.Collector(
                 collectorId: Self.stableCollectorId(),
                 collectorType: "human",
-                collectionMode: "egocentric_head_mounted"
+                collectionMode: "egocentric_head_mounted",
+                campaign: CampaignConfig.campaign,
+                userName: CampaignConfig.userName.isEmpty ? nil : CampaignConfig.userName,
+                userSlug: CampaignConfig.userSlug,
+                vendorId: CampaignConfig.vendorIdentifier
             ),
             videoEncoding: SessionMetadata.VideoEncoding(
                 codec: "h264",
@@ -331,7 +343,7 @@ final class RecordingOrchestrator: ObservableObject {
             validation: validation, warnings: warnings
         )
 
-        do { try packagingService.writeMetadata(metadata, to: dir.appendingPathComponent("metadata.json")) } catch {}
+        do { try packagingService.writeMetadata(metadata, to: SessionFiles.url("metadata", "json", in: dir)) } catch {}
 
         let bitrateMbps = Double(videoCaptureService?.targetBitrate ?? 6_000_000) / 1_000_000.0
 
@@ -374,7 +386,7 @@ final class RecordingOrchestrator: ObservableObject {
                 encodingAcceptable: bitrateMbps >= 4.0 && bitrateMbps <= 9.0
             )
         )
-        do { try JSONFileWriter.write(techVal, to: dir.appendingPathComponent("technical_validation.json")) } catch {}
+        do { try JSONFileWriter.write(techVal, to: SessionFiles.url("technical_validation", "json", in: dir)) } catch {}
 
         do { try packagingService.writeManifest(sessionId: sessionId, sessionDir: dir) } catch {}
         cleanup()

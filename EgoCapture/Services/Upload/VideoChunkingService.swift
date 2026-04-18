@@ -36,11 +36,12 @@ enum VideoChunkingService {
 
         let chunkCount = max(1, Int(ceil(totalSec / chunkDurationSec)))
         var chunks: [ChunkInfo] = []
+        let sessionCode = outputDir.lastPathComponent
 
         for i in 0..<chunkCount {
             let startSec = Double(i) * chunkDurationSec
             let endSec = min(startSec + chunkDurationSec, totalSec)
-            let filename = String(format: "chunk_%03d.mp4", i + 1)
+            let filename = String(format: "chunk_%03d_%@.mp4", i + 1, sessionCode)
             let chunkURL = outputDir.appendingPathComponent(filename)
 
             try? FileManager.default.removeItem(at: chunkURL)
@@ -84,7 +85,7 @@ enum VideoChunkingService {
             chunks: chunks
         )
 
-        let manifestURL = outputDir.appendingPathComponent("chunk_manifest.json")
+        let manifestURL = SessionFiles.url("chunk_manifest", "json", in: outputDir)
         let data = try JSONEncoder.prettyEncoder.encode(manifest)
         try data.write(to: manifestURL)
 

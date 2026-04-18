@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Xcode user-specific
+xcuserdata/
+*.xcuserstate
+
+# CocoaPods build artefacts (keep lockfile + Podfile; skip vendored sources)
+# Pods/
+build/
+DerivedData/
+
+# Backups created during refactors
+.backup/
+
+# Cursor local state
+.cursor/
+
+# Serverless Lambda build + virtualenv artefacts
+serverless/.venv/
+serverless/.aws-sam/
+serverless/package.zip
+serverless/*.zip

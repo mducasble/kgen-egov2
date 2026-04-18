@@ -13,19 +13,12 @@ final class UploadManager: ObservableObject {
     private var uploadTasks: [String: Task<Void, Never>] = [:]
     private var sessionReadyObserver: NSObjectProtocol?
 
-    private let metadataFiles = [
-        "imu.jsonl",
-        "video_timestamps.jsonl",
-        "metadata.json",
-        "technical_validation.json",
-        "session_manifest.json",
-        "camera_format_diagnostics.json"
-    ]
-
     private init() {
-        resumePendingUploads()
+        // Register the observer synchronously so new sessions are picked up immediately;
+        // resuming pending uploads is deferred to keep app launch responsive (the previous
+        // behaviour blocked the main actor when the user had many unfinished sessions).
         sessionReadyObserver = NotificationCenter.default.addObserver(
-            forName: UploadNotificationName.sessionReady,
+            forName: Notification.Name("egocaptureSessionReadyForUpload"),
             object: nil,
             queue: .main
         ) { [weak self] notification in
@@ -34,6 +27,12 @@ final class UploadManager: ObservableObject {
             Task { @MainActor in
                 self?.startUpload(sessionId: sessionId, sessionDir: sessionDir)
             }
+        }
+        Task { @MainActor [weak self] in
+            // 1s breathing room — gives SwiftUI time to render first frame before we touch
+            // the sessions folder + start uploads.
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            self?.resumePendingUploads()
         }
     }
 
@@ -45,11 +44,15 @@ final class UploadManager: ObservableObject {
 
         let config = S3Config.embedded()
         guard config.isValid else {
-            print("[UploadManager] S3 credentials not configured — skipping upload for \(sessionId.prefix(8))")
+            print("[UploadManager] S3 credentials not configured — skipping upload for \(sessionId)")
             return
         }
 
-        let collectorId = UserDefaults.standard.string(forKey: "egocapture_collector_id") ?? "unknown"
+        // `collectorId` here is the S3 key prefix that groups sessions together.
+        // It now resolves to "<campaign>/<user-slug>" (e.g. "EgoTeste-iOS/marcos"),
+        // instead of the legacy per-device UUID. The field is kept on UploadState for
+        // backward compatibility with resume-in-progress data written by older builds.
+        let collectorId = CampaignConfig.s3Prefix
 
         let task = Task {
             await runUploadPipeline(sessionId: sessionId, sessionDir: sessionDir, collectorId: collectorId, config: config)
@@ -94,10 +97,8 @@ final class UploadManager: ObservableObject {
     // MARK: - Pipeline
 
     private func runUploadPipeline(sessionId: String, sessionDir: URL, collectorId: String, config: S3Config) async {
-        let videoURL = sessionDir.appendingPathComponent("video.mp4")
-
-        guard FileManager.default.fileExists(atPath: videoURL.path) else {
-            print("[UploadManager] No video.mp4 found in \(sessionId.prefix(8))")
+        guard let videoURL = SessionFiles.resolveExisting("video", "mp4", in: sessionDir) else {
+            print("[UploadManager] No video.mp4 found in \(sessionId)")
             uploadTasks[sessionId] = nil
             return
         }
@@ -114,7 +115,7 @@ final class UploadManager: ObservableObject {
         activeUploads[sessionId] = state
 
         do {
-            print("[UploadManager] Chunking video for session \(sessionId.prefix(8))...")
+            print("[UploadManager] Chunking video for session \(sessionId)...")
             let manifest = try await VideoChunkingService.chunkVideo(at: videoURL, outputDir: sessionDir)
             print("[UploadManager] Created \(manifest.totalChunks) chunks (\(String(format: "%.1f", manifest.totalDurationSec))s total)")
 
@@ -123,7 +124,7 @@ final class UploadManager: ObservableObject {
                 collectorId: collectorId,
                 sessionDir: sessionDir,
                 chunkManifest: manifest,
-                metadataFiles: metadataFiles
+                metadataFiles: SessionFiles.metadataFilenames(in: sessionDir)
             )
             UploadStateManager.save(state, sessionDir: sessionDir)
             activeUploads[sessionId] = state
@@ -190,8 +191,10 @@ final class UploadManager: ObservableObject {
 
         if state.isFullyUploaded {
             state.status = .completed
-            print("[UploadManager] Session \(sessionId.prefix(8)) fully uploaded — cleaning up local files")
-            cleanupLocalFiles(sessionDir: sessionDir, state: state)
+            print("[UploadManager] Session \(sessionId) fully uploaded — writing sentinel")
+            await uploadSentinel(sessionId: sessionId, sessionDir: sessionDir, state: state, uploader: uploader)
+            print("[UploadManager] Removing intermediate chunks")
+            cleanupChunks(sessionDir: sessionDir, state: state)
         } else if state.hasFailures {
             state.status = .partiallyFailed
         }
@@ -201,24 +204,68 @@ final class UploadManager: ObservableObject {
         uploadTasks[sessionId] = nil
     }
 
-    // MARK: - Cleanup
+    // MARK: - Sentinel
 
-    private func cleanupLocalFiles(sessionDir: URL, state: UploadState) {
-        let fm = FileManager.default
+    /// Uploads a tiny `upload_complete_{sessionId}.json` as the LAST object so the
+    /// server-side MCAP builder (S3 event → Lambda) has a reliable trigger indicating
+    /// that every other artifact is already in place.
+    ///
+    /// Failure to upload the sentinel is non-fatal for the session itself, but it
+    /// does mean no MCAP will be built for this session until a manual re-run.
+    private func uploadSentinel(
+        sessionId: String,
+        sessionDir: URL,
+        state: UploadState,
+        uploader: S3UploadService
+    ) async {
+        let filename = "upload_complete_\(sessionId).json"
+        let localURL = sessionDir.appendingPathComponent(filename)
+        let s3Key = "\(state.collectorId)/\(sessionId)/\(filename)"
 
-        if let videoURL = Optional(sessionDir.appendingPathComponent("video.mp4")),
-           fm.fileExists(atPath: videoURL.path) {
-            try? fm.removeItem(at: videoURL)
-            print("[UploadManager] Deleted local video.mp4")
+        let payload: [String: Any] = [
+            "sessionId":     sessionId,
+            "collectorId":   state.collectorId,
+            "completedAt":   Date().timeIntervalSince1970 * 1000.0,
+            "uploadedFiles": state.completedFiles,
+            "version":       1,
+        ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]) else {
+            print("[UploadManager] ✗ sentinel: could not encode payload")
+            return
         }
 
+        do {
+            try data.write(to: localURL, options: .atomic)
+        } catch {
+            print("[UploadManager] ✗ sentinel: write failed — \(error.localizedDescription)")
+            return
+        }
+
+        let result = await uploader.uploadFile(localURL: localURL, s3Key: s3Key)
+        switch result {
+        case .success(let attempt):
+            print("[UploadManager] ✓ sentinel uploaded (attempt \(attempt)) → s3://\(s3Key)")
+        case .failure(let attempt, let error):
+            print("[UploadManager] ✗ sentinel upload failed after \(attempt) attempt(s): \(error)")
+        }
+    }
+
+    // MARK: - Cleanup
+
+    /// Remove only the intermediate `chunk_*.mp4` files after a successful upload.
+    /// The original video (`video_{code}.mp4`) is always preserved locally.
+    private func cleanupChunks(sessionDir: URL, state: UploadState) {
+        let fm = FileManager.default
+        var removed = 0
         for chunk in state.files where chunk.filename.hasPrefix("chunk_") && chunk.filename.hasSuffix(".mp4") {
             let chunkURL = sessionDir.appendingPathComponent(chunk.filename)
             if fm.fileExists(atPath: chunkURL.path) {
                 try? fm.removeItem(at: chunkURL)
+                removed += 1
             }
         }
-        print("[UploadManager] Deleted local video chunks")
+        print("[UploadManager] Deleted \(removed) local chunk file(s); video preserved")
     }
 
     // MARK: - Resume on App Launch
@@ -227,18 +274,35 @@ final class UploadManager: ObservableObject {
         let config = S3Config.embedded()
         guard config.isValid else { return }
 
-        let sessions = SessionManager.shared.listSessions()
-        for session in sessions {
-            guard let state = UploadStateManager.load(sessionDir: session.directory) else { continue }
-
-            if state.status == .uploading || state.status == .partiallyFailed {
-                activeUploads[session.id] = state
-
-                if state.pendingFiles > 0 || state.hasFailures {
-                    retryUpload(sessionId: session.id)
+        // Disk enumeration + state parsing happens off the main actor so the UI thread
+        // stays free during the scan, even if there are dozens of sessions on disk.
+        Task.detached(priority: .utility) { [weak self] in
+            let snapshots: [(id: String, state: UploadState, shouldRetry: Bool)] =
+                SessionManager.shared.listSessions().compactMap { session in
+                    guard let state = UploadStateManager.load(sessionDir: session.directory) else { return nil }
+                    switch state.status {
+                    case .uploading, .partiallyFailed:
+                        return (session.id, state, state.pendingFiles > 0 || state.hasFailures)
+                    case .completed:
+                        return (session.id, state, false)
+                    default:
+                        return nil
+                    }
                 }
-            } else if state.status == .completed {
-                activeUploads[session.id] = state
+
+            guard let self else { return }
+            await MainActor.run {
+                for snap in snapshots {
+                    self.activeUploads[snap.id] = snap.state
+                }
+            }
+
+            // Serialise retries with a small gap so we do not flood the network or the
+            // main actor. Each retryUpload call itself spawns a detached Task, so this
+            // loop only paces the scheduling, not the actual upload work.
+            for snap in snapshots where snap.shouldRetry {
+                await MainActor.run { self.retryUpload(sessionId: snap.id) }
+                try? await Task.sleep(nanoseconds: 200_000_000)
             }
         }
     }

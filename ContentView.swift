@@ -1,48 +1,45 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var animateGradient = false
-
     var body: some View {
         NavigationStack {
             ZStack {
-                backgroundGradient
+                EGOBlobBackground()
 
                 VStack(spacing: 0) {
                     Spacer()
 
-                    heroSection
-                        .padding(.bottom, 48)
+                    egoHeroSection
+                        .padding(.bottom, 40)
 
-                    VStack(spacing: 14) {
+                    VStack(spacing: 16) {
                         NavigationLink {
                             RecordingView()
                         } label: {
-                            GlassButton(
+                            GlassCTAButton(
                                 icon: "record.circle",
                                 title: "Start Recording",
-                                accent: .red,
-                                isPrimary: true
+                                tint: .green
                             )
                         }
 
                         NavigationLink {
                             SessionListView()
                         } label: {
-                            GlassButton(
+                            GlassCTAButton(
                                 icon: "folder.fill",
                                 title: "View Sessions",
-                                accent: .blue
+                                tint: .blue
                             )
                         }
 
                         NavigationLink {
                             SettingsView()
                         } label: {
-                            GlassButton(
+                            GlassCTAButton(
                                 icon: "gearshape.fill",
                                 title: "Settings",
-                                accent: .gray
+                                tint: .neutral
                             )
                         }
                     }
@@ -50,65 +47,133 @@ struct ContentView: View {
 
                     Spacer()
 
+                    Text("EGOCENTRIC VIDEOS")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(EGOTheme.textMuted)
+                        .tracking(3.2)
+
                     Text("Mount camera at forehead level · Angle downward for hand visibility")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(EGOTheme.textSecondary)
                         .multilineTextAlignment(.center)
+                        .padding(.top, 10)
+                        .padding(.horizontal, 28)
                         .padding(.bottom, 24)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
+        .tint(EGOTheme.textPrimary)
+        .preferredColorScheme(.dark)
     }
 
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.05, green: 0.05, blue: 0.12),
-                Color(red: 0.08, green: 0.06, blue: 0.18),
-                Color(red: 0.04, green: 0.04, blue: 0.10)
-            ],
-            startPoint: animateGradient ? .topLeading : .top,
-            endPoint: animateGradient ? .bottomTrailing : .bottom
-        )
-        .ignoresSafeArea()
-        .onAppear {
-            withAnimation(.easeInOut(duration: 6).repeatForever(autoreverses: true)) {
-                animateGradient.toggle()
-            }
-        }
-    }
-
-    private var heroSection: some View {
-        VStack(spacing: 12) {
+    private var egoHeroSection: some View {
+        VStack(spacing: 16) {
             ZStack {
-                Circle()
-                    .fill(.white.opacity(0.06))
-                    .frame(width: 100, height: 100)
-                    .blur(radius: 10)
+                // Back panels (layered glass chips, like the reference)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                    }
+                    .frame(width: 120, height: 82)
+                    .offset(x: 28, y: -6)
+                    .rotationEffect(.degrees(4))
+                    .shadow(color: .black.opacity(0.4), radius: 18, y: 10)
 
-                Image(systemName: "video.badge.waveform")
-                    .font(.system(size: 44, weight: .light))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.red.opacity(0.9), .orange.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                    }
+                    .frame(width: 118, height: 80)
+                    .offset(x: -12, y: 8)
+                    .rotationEffect(.degrees(-6))
+                    .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
+
+                // Front brand chip
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(EGOTheme.brandGreen.opacity(0.95))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.9), EGOTheme.brandGreen.opacity(0.7)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .trim(from: 0, to: 0.5)
+                            .stroke(Color.white.opacity(0.8), lineWidth: 1)
+                            .blendMode(.plusLighter)
+                    }
+                    .frame(width: 104, height: 76)
+                    .shadow(color: EGOTheme.brandGreen.opacity(0.45), radius: 18, y: 10)
+                    .overlay {
+                        HStack(spacing: 4) {
+                            Text("EGO")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.black.opacity(0.85))
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Color.black.opacity(0.8))
+                        }
+                    }
             }
+            .frame(height: 120)
 
             Text("EgoCapture")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundStyle(EGOTheme.textPrimary)
+                .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
 
             Text("Egocentric Data Collection")
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(EGOTheme.textSecondary)
         }
     }
 }
 
+struct GlassCTAButton: View {
+    let icon: String
+    let title: String
+    let tint: EGOGlassTint
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.95))
+                .frame(width: 28)
+                .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+
+            Text(title)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.98))
+                .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white.opacity(0.55))
+        }
+        .frame(height: 58)
+        .padding(.horizontal, 18)
+        .background {
+            EGOGlassCapsuleBackground(tint: tint, tintStrength: tint.isNeutral ? 0.25 : 0.95)
+        }
+    }
+}
+
+/// Kept for older call sites; re-routes to the new glass CTA look.
 struct GlassButton: View {
     let icon: String
     let title: String
@@ -116,46 +181,10 @@ struct GlassButton: View {
     var isPrimary: Bool = false
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(isPrimary ? .white : accent)
-                .frame(width: 28)
-
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(isPrimary ? .white : .white.opacity(0.85))
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.3))
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background {
-            if isPrimary {
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(
-                        LinearGradient(
-                            colors: [accent.opacity(0.8), accent.opacity(0.5)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(.white.opacity(0.15), lineWidth: 0.5)
-                    )
-            } else {
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(.white.opacity(0.07))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                    )
-            }
-        }
+        GlassCTAButton(
+            icon: icon,
+            title: title,
+            tint: .custom(accent)
+        )
     }
 }

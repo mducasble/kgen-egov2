@@ -7,8 +7,8 @@ enum EmbeddedAWSCredentials {
     static let region = "us-east-1"
 
     /// IAM user access key ID (starts with AKIA…).
-    static let accessKeyId = ""
+    static let accessKeyId = "AKIA3RQQV5YO6UJ7KSDL"
 
     /// IAM secret access key (paired with accessKeyId).
-    static let secretAccessKey = ""
+    static let secretAccessKey = "96yv5drmhV4Vv+dTI2TN08Tlgz0BeFak+uHeysZZ"
 }

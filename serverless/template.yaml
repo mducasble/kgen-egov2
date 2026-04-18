@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  KGeN Eye MCAP builder. Triggered by S3 ObjectCreated events on the sentinel
+  file (upload_complete_*.json). Reads all session JSON artifacts, builds a
+  single-session .mcap, and writes it back to the same prefix.
+
+  NOTE: the S3 notification itself is wired up post-deploy via `scripts/attach_s3_notification.sh`
+  because the target bucket already exists (pre-existing `kaivideo`). SAM cannot manage S3 events
+  for buckets it did not create in the same stack.
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: kaivideo
+    Description: Existing S3 bucket containing session artifacts.
+
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues: [DEBUG, INFO, WARNING, ERROR]
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    MemorySize: 1024
+    Timeout: 300
+    Environment:
+      Variables:
+        LOG_LEVEL: !Ref LogLevel
+        PYTHONUNBUFFERED: "1"
+
+Resources:
+
+  # --- Lambda --------------------------------------------------------------
+  McapBuilderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: kgen-eye-mcap-builder
+      CodeUri: lambda/
+      Handler: handler.handler
+      Description: Convert session JSON artifacts into a single MCAP file.
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
+        - S3WritePolicy:
+            BucketName: !Ref BucketName
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt McapBuilderDLQ.Arn
+
+  # --- Permission so S3 can invoke the function (used by the notification) ---
+  McapBuilderS3InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref McapBuilderFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub "arn:aws:s3:::${BucketName}"
+
+  # --- Dead-letter queue ---------------------------------------------------
+  McapBuilderDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: kgen-eye-mcap-builder-dlq
+      MessageRetentionPeriod: 1209600   # 14 days
+
+  # --- CloudWatch alarm on DLQ -------------------------------------------
+  DLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: kgen-eye-mcap-builder-dlq-not-empty
+      AlarmDescription: MCAP builder failed enough times to hit the DLQ.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt McapBuilderDLQ.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  FunctionName:
+    Value: !Ref McapBuilderFunction
+  FunctionArn:
+    Value: !GetAtt McapBuilderFunction.Arn
+  BucketName:
+    Value: !Ref BucketName
+  DLQUrl:
+    Value: !Ref McapBuilderDLQ

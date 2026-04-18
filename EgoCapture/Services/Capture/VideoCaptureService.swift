@@ -1,6 +1,8 @@
 import Foundation
 import AVFoundation
+import CoreMedia
 import CoreVideo
+import simd
 
 protocol VideoCaptureDelegate: AnyObject {
     /// Called from captureQueue (.userInteractive). Must return in < 0.5ms.
@@ -69,6 +71,14 @@ final class VideoCaptureService: NSObject {
     private(set) var focalLengthFy: Double?
     private(set) var principalPointCx: Double?
     private(set) var principalPointCy: Double?
+
+    /// How the intrinsics were obtained:
+    ///   - "pinhole_derived_from_fov": computed from horizontal FOV + active resolution (fallback).
+    ///   - "avcapture_camera_intrinsic_matrix": read from per-frame CameraIntrinsicMatrix
+    ///     attachment, which is Apple's factory-calibrated 3x3 intrinsic matrix for this device.
+    private(set) var intrinsicsSource: String = "pinhole_derived_from_fov"
+    private(set) var intrinsicsDeliverySupported: Bool = false
+    private(set) var intrinsicsDeliveryEnabled: Bool = false
 
     private var previousFrameNs: UInt64?
     private var intervalSumMs: Double = 0
@@ -156,6 +166,16 @@ final class VideoCaptureService: NSObject {
                 c.videoRotationAngle = 0
             } else if c.isVideoOrientationSupported {
                 c.videoOrientation = .landscapeRight
+            }
+
+            // Request Apple's factory-calibrated 3x3 intrinsic matrix as a
+            // per-frame attachment. First frame in the delegate picks it up and
+            // overwrites the pinhole-derived fx/fy/cx/cy values with the real
+            // measured ones.
+            intrinsicsDeliverySupported = c.isCameraIntrinsicMatrixDeliverySupported
+            if intrinsicsDeliverySupported {
+                c.isCameraIntrinsicMatrixDeliveryEnabled = true
+                intrinsicsDeliveryEnabled = c.isCameraIntrinsicMatrixDeliveryEnabled
             }
         }
 
@@ -436,7 +456,7 @@ final class VideoCaptureService: NSObject {
             ] as [String: Any],
             "allFormats": diag
         ]
-        let url = directory.appendingPathComponent("camera_format_diagnostics.json")
+        let url = SessionFiles.url("camera_format_diagnostics", "json", in: directory)
         if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
             try? data.write(to: url)
         }
@@ -457,10 +477,50 @@ final class VideoCaptureService: NSObject {
 
 extension VideoCaptureService: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        if intrinsicsSource == "pinhole_derived_from_fov" {
+            readCameraIntrinsicMatrixIfAvailable(from: sampleBuffer)
+        }
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         handleCapturedFrame(pb, timestamp: CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
     }
     func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         captureQueueDrops += 1; droppedFrames += 1
+    }
+
+    /// Reads the factory-calibrated 3x3 intrinsic matrix attached to the sample
+    /// buffer and stores fx/fy/cx/cy. Runs only until successful (one-shot).
+    /// Storage is column-major (simd convention):
+    ///   K = | fx  0  cx |      columns.0 = (fx, 0, 0)
+    ///       |  0 fy  cy |      columns.1 = (0, fy, 0)
+    ///       |  0  0   1 |      columns.2 = (cx, cy, 1)
+    private func readCameraIntrinsicMatrixIfAvailable(from sampleBuffer: CMSampleBuffer) {
+        guard intrinsicsDeliveryEnabled else { return }
+        guard let attachment = CMGetAttachment(
+            sampleBuffer,
+            key: kCMSampleBufferAttachmentKey_CameraIntrinsicMatrix,
+            attachmentModeOut: nil
+        ) else { return }
+        guard let data = attachment as? Data,
+              data.count == MemoryLayout<matrix_float3x3>.size else { return }
+
+        var matrix = matrix_float3x3()
+        _ = withUnsafeMutableBytes(of: &matrix) { dst in
+            data.copyBytes(to: dst)
+        }
+        let fx = Double(matrix.columns.0.x)
+        let fy = Double(matrix.columns.1.y)
+        let cx = Double(matrix.columns.2.x)
+        let cy = Double(matrix.columns.2.y)
+
+        guard fx.isFinite, fy.isFinite, cx.isFinite, cy.isFinite,
+              fx > 0, fy > 0 else { return }
+
+        focalLengthFx = fx
+        focalLengthFy = fy
+        principalPointCx = cx
+        principalPointCy = cy
+        intrinsicsSource = "avcapture_camera_intrinsic_matrix"
+
+        print("[VideoCaptureService] Camera intrinsics (measured): fx=\(String(format: "%.2f", fx)) fy=\(String(format: "%.2f", fy)) cx=\(String(format: "%.2f", cx)) cy=\(String(format: "%.2f", cy))")
     }
 }

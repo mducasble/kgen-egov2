@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SessionManifest",
+  "description": "Self-describing manifest listing all artifacts produced in a session.",
+  "type": "object",
+  "properties": {
+    "sessionId":        { "type": "string" },
+    "createdAtEpochMs": { "type": "number" },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "filename":    { "type": "string" },
+          "type":        { "type": "string" },
+          "description": { "type": "string" },
+          "sizeBytes":   { "type": "integer" },
+          "rowCount":    { "type": ["integer", "null"] }
+        },
+        "required": ["filename", "type", "sizeBytes"]
+      }
+    }
+  },
+  "required": ["sessionId", "createdAtEpochMs", "artifacts"],
+  "additionalProperties": true
+}

@@ -46,16 +46,21 @@ struct UploadState: Codable {
 /// Reads/writes UploadState to disk in the session directory.
 enum UploadStateManager {
 
-    private static let filename = "upload_state.json"
+    /// Resolves the on-disk URL for the upload_state file, preferring the new
+    /// sessioncode-suffixed name and falling back to the legacy `upload_state.json`.
+    private static func resolveURL(sessionDir: URL) -> URL {
+        SessionFiles.resolveExisting("upload_state", "json", in: sessionDir)
+            ?? SessionFiles.url("upload_state", "json", in: sessionDir)
+    }
 
     static func load(sessionDir: URL) -> UploadState? {
-        let url = sessionDir.appendingPathComponent(filename)
-        guard let data = try? Data(contentsOf: url) else { return nil }
+        guard let url = SessionFiles.resolveExisting("upload_state", "json", in: sessionDir),
+              let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(UploadState.self, from: data)
     }
 
     static func save(_ state: UploadState, sessionDir: URL) {
-        let url = sessionDir.appendingPathComponent(filename)
+        let url = resolveURL(sessionDir: sessionDir)
         var updated = state
         updated.lastUpdated = Date().timeIntervalSince1970 * 1000.0
         guard let data = try? JSONEncoder.prettyEncoder.encode(updated) else { return }
@@ -85,13 +90,16 @@ enum UploadStateManager {
             ))
         }
 
-        entries.append(UploadState.FileUploadEntry(
-            filename: "chunk_manifest.json",
-            s3Key: "\(s3Base)/chunk_manifest.json",
-            sizeBytes: fileSize(sessionDir.appendingPathComponent("chunk_manifest.json")),
-            status: .pending,
-            attempts: 0
-        ))
+        if let chunkManifestURL = SessionFiles.resolveExisting("chunk_manifest", "json", in: sessionDir) {
+            let manifestName = chunkManifestURL.lastPathComponent
+            entries.append(UploadState.FileUploadEntry(
+                filename: manifestName,
+                s3Key: "\(s3Base)/\(manifestName)",
+                sizeBytes: fileSize(chunkManifestURL),
+                status: .pending,
+                attempts: 0
+            ))
+        }
 
         for name in metadataFiles {
             let url = sessionDir.appendingPathComponent(name)
