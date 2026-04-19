@@ -6,7 +6,7 @@ xcuserdata/
 *.xcuserstate
 
 # CocoaPods build artefacts (keep lockfile + Podfile; skip vendored sources)
-# Pods/
+Pods/
 build/
 DerivedData/
 
