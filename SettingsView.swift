@@ -18,7 +18,7 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            EGOBlobBackground()
+            AmbientImageBackdrop()
 
             ScrollView {
                 VStack(spacing: 16) {
@@ -36,7 +36,7 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .toolbarBackground(.hidden, for: .navigationBar)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     // MARK: - Sections
@@ -52,16 +52,16 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Your name")
                         .font(.caption)
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
 
                     TextField("e.g. Marcos D", text: $userName)
                         .font(.subheadline)
-                        .foregroundStyle(EGOTheme.textPrimary)
+                        .foregroundStyle(KE.ink1)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
                         .background {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(EGOTheme.textMuted.opacity(0.08))
+                                .fill(Color.white.opacity(0.40))
                         }
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled(true)
@@ -70,21 +70,21 @@ struct SettingsView: View {
                 HStack {
                     Text("Campaign")
                         .font(.subheadline)
-                        .foregroundStyle(EGOTheme.textSecondary)
+                        .foregroundStyle(KE.ink2)
                     Spacer()
                     Text(CampaignConfig.campaign)
                         .font(.subheadline.monospaced())
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("S3 PATH PREFIX")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
                         .tracking(0.8)
                     Text("\(previewPrefix)/<session-id>/…")
                         .font(.caption.monospaced())
-                        .foregroundStyle(EGOTheme.textPrimary.opacity(0.85))
+                        .foregroundStyle(KE.ink1)
                         .textSelection(.enabled)
                 }
                 .padding(.horizontal, 12)
@@ -92,12 +92,12 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(EGOTheme.textMuted.opacity(0.06))
+                        .fill(Color.white.opacity(0.30))
                 }
 
                 Text("Your name groups every session you record under the same S3 folder. Leaving it blank uses an anonymous per-device token.")
                     .font(.caption2)
-                    .foregroundStyle(EGOTheme.textMuted.opacity(0.9))
+                    .foregroundStyle(KE.ink3.opacity(0.9))
             }
         }
     }
@@ -109,34 +109,34 @@ struct SettingsView: View {
                 HStack {
                     Text("Bucket")
                         .font(.subheadline)
-                        .foregroundStyle(EGOTheme.textSecondary)
+                        .foregroundStyle(KE.ink2)
                     Spacer()
                     Text(cfg.bucket)
                         .font(.subheadline.monospaced())
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
                 }
                 HStack {
                     Text("Region")
                         .font(.subheadline)
-                        .foregroundStyle(EGOTheme.textSecondary)
+                        .foregroundStyle(KE.ink2)
                     Spacer()
                     Text(cfg.region)
                         .font(.subheadline.monospaced())
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
                 }
 
                 HStack(spacing: 6) {
                     Image(systemName: cfg.isValid ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
-                        .foregroundStyle(cfg.isValid ? EGOTheme.mint : Color.orange.opacity(0.85))
+                        .foregroundStyle(cfg.isValid ? KE.accentGreen : Color.orange)
                         .font(.caption)
                     Text(cfg.isValid ? "Credentials embedded in app build" : "Set keys in EmbeddedAWSCredentials.swift before build")
                         .font(.caption2)
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
                 }
 
                 Text("Sessions upload automatically after recording (≤2 min video chunks). Keys are not shown to contributors.")
                     .font(.caption2)
-                    .foregroundStyle(EGOTheme.textMuted.opacity(0.85))
+                    .foregroundStyle(KE.ink3.opacity(0.85))
             }
         }
     }
@@ -154,7 +154,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Translation from head center (m)")
                         .font(.caption)
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
 
                     HStack(spacing: 10) {
                         GlassTextField(label: "X (right)", value: $translationX)
@@ -166,7 +166,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Downward tilt")
                         .font(.subheadline)
-                        .foregroundStyle(EGOTheme.textSecondary)
+                        .foregroundStyle(KE.ink2)
                     Spacer()
                     GlassTextField(label: "°", value: $downwardTiltDeg)
                         .frame(width: 90)
@@ -174,7 +174,7 @@ struct SettingsView: View {
 
                 Text("Adjust values to match your physical camera mount position.")
                     .font(.caption2)
-                    .foregroundStyle(EGOTheme.textMuted.opacity(0.9))
+                    .foregroundStyle(KE.ink3.opacity(0.9))
             }
         }
     }
@@ -213,11 +213,11 @@ struct SettingsView: View {
                 HStack {
                     Text("Country")
                         .font(.subheadline)
-                        .foregroundStyle(EGOTheme.textSecondary)
+                        .foregroundStyle(KE.ink2)
                     Spacer()
                     TextField("", text: $country)
                         .font(.subheadline)
-                        .foregroundStyle(EGOTheme.textPrimary)
+                        .foregroundStyle(KE.ink1)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 80)
                 }
@@ -230,12 +230,12 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 TextField("Task description (optional)", text: $taskDescription)
                     .font(.subheadline)
-                    .foregroundStyle(EGOTheme.textPrimary)
+                    .foregroundStyle(KE.ink1)
                     .lineLimit(3)
 
                 Text("e.g., \"dishes cleanup\" or \"warehouse stocking\"")
                     .font(.caption2)
-                    .foregroundStyle(EGOTheme.textMuted.opacity(0.9))
+                    .foregroundStyle(KE.ink3.opacity(0.9))
             }
         }
     }
@@ -251,17 +251,17 @@ struct SettingsView: View {
 
                 Text("MediaPipe outputs are saved as *_mediapipe.jsonl when enabled.")
                     .font(.caption2)
-                    .foregroundStyle(EGOTheme.textMuted.opacity(0.9))
+                    .foregroundStyle(KE.ink3.opacity(0.9))
 
                 if handTrackingBackend != HandTrackingBackendType.appleVision.rawValue {
                     HStack {
                         Text("Model path")
                             .font(.subheadline)
-                            .foregroundStyle(EGOTheme.textSecondary)
+                            .foregroundStyle(KE.ink2)
                         Spacer()
                         TextField("", text: $mediaPipeModelPath)
                             .font(.caption.monospaced())
-                            .foregroundStyle(EGOTheme.textMuted)
+                            .foregroundStyle(KE.ink3)
                             .multilineTextAlignment(.trailing)
                     }
                 }
@@ -275,7 +275,7 @@ struct SettingsView: View {
         HStack {
             Text(title)
                 .font(.subheadline)
-                .foregroundStyle(EGOTheme.textSecondary)
+                .foregroundStyle(KE.ink2)
 
             Spacer()
 
@@ -295,15 +295,19 @@ struct SettingsView: View {
                 HStack(spacing: 4) {
                     Text(options.first(where: { $0.1 == selection.wrappedValue })?.0 ?? selection.wrappedValue)
                         .font(.subheadline)
-                        .foregroundStyle(EGOTheme.textPrimary.opacity(0.75))
+                        .foregroundStyle(KE.ink1.opacity(0.75))
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.caption2)
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background {
-                    EGOGlassCapsuleBackground(tint: .neutral, tintStrength: 0.15)
+                    Capsule()
+                        .fill(Color.white.opacity(0.40))
+                        .overlay(
+                            Capsule().strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                        )
                 }
             }
         }
@@ -335,21 +339,20 @@ struct GlassSection<Content: View>: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.caption)
-                    .foregroundStyle(EGOTheme.textMuted)
+                    .foregroundStyle(KE.ink3)
 
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(EGOTheme.textMuted)
+                    .foregroundStyle(KE.ink3)
                     .tracking(0.8)
             }
             .padding(.leading, 4)
 
-            content
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background {
-                    EGOGlassBackground(cornerRadius: 18, tint: .neutral, tintStrength: 0.08)
-                }
+            GlassCard(cornerRadius: 18) {
+                content
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 }
@@ -362,17 +365,22 @@ struct GlassTextField: View {
         VStack(spacing: 3) {
             Text(label)
                 .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(EGOTheme.textMuted)
+                .foregroundStyle(KE.ink3)
                 .textCase(.uppercase)
 
             TextField("", value: $value, format: .number)
                 .font(.subheadline.monospacedDigit())
-                .foregroundStyle(EGOTheme.textPrimary)
+                .foregroundStyle(KE.ink1)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background {
-                    EGOGlassBackground(cornerRadius: 10, tint: .neutral, tintStrength: 0.05)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white.opacity(0.40))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.5), lineWidth: 1)
+                        )
                 }
         }
     }

@@ -30,7 +30,9 @@ struct EgoCaptureApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            // Ambient Glass test — revert this single line to `ContentView()` to
+            // roll back to the previous home layout.
+            KGenEyeHomeView()
         }
     }
 }

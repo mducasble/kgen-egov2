@@ -1,12 +1,34 @@
 import SwiftUI
+import AVFoundation
 
 struct RecordingView: View {
     @StateObject private var orchestrator = RecordingOrchestrator()
+    @StateObject private var idlePreview = IdlePreviewSession()
     @Environment(\.dismiss) private var dismiss
 
-    @State private var handsGuideSelected = true
-    @State private var gazeGuideSelected = false
     @State private var flashIconOn = false
+
+    // FOV diagnostic UI state — disabled by default. Re-enable together with
+    // `fovDiagnosticCard` and `runFOVDiagnostic()` below when needed.
+    // @State private var fovDiagnosticShareURL: URL?
+    // @State private var fovDiagnosticError: String?
+
+    /// Persisted capture preset choice. Keep the raw value in AppStorage so
+    /// `VideoCaptureService.CapturePreset.current` sees the same value when
+    /// the orchestrator starts the recording.
+    @AppStorage(VideoCaptureService.CapturePreset.userDefaultsKey)
+    private var capturePresetRaw: String = VideoCaptureService.CapturePreset.standard1080p.rawValue
+
+    private var wideFovEnabled: Binding<Bool> {
+        Binding(
+            get: { capturePresetRaw == VideoCaptureService.CapturePreset.wideFov960p.rawValue },
+            set: { enabled in
+                capturePresetRaw = enabled
+                    ? VideoCaptureService.CapturePreset.wideFov960p.rawValue
+                    : VideoCaptureService.CapturePreset.standard1080p.rawValue
+            }
+        )
+    }
 
     var body: some View {
         ZStack {
@@ -17,7 +39,7 @@ struct RecordingView: View {
 
                 recordingChromeOverlay
             } else {
-                EGOBlobBackground()
+                AmbientImageBackdrop()
                 idleLayout
             }
         }
@@ -25,60 +47,75 @@ struct RecordingView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(orchestrator.isRecording)
         .toolbarBackground(.hidden, for: .navigationBar)
-        .preferredColorScheme(.dark)
-        .tint(EGOTheme.textPrimary)
+        .preferredColorScheme(.light)
+        .tint(KE.ink1)
         .onAppear {
             OrientationLock.shared.lock(.landscapeRight)
+            if !orchestrator.isRecording { idlePreview.start() }
         }
         .onDisappear {
             OrientationLock.shared.lock(.all)
+            idlePreview.stop()
+        }
+        .onChange(of: orchestrator.isRecording) { _, recording in
+            if recording {
+                idlePreview.stop()
+            } else {
+                idlePreview.start()
+            }
         }
     }
 
     // MARK: - Idle (pre-recording)
 
     private var idleLayout: some View {
-        HStack(spacing: 16) {
-            previewContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(
-                            LinearGradient(
-                                colors: [.white.opacity(0.95), .white.opacity(0.35)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-                .shadow(color: .black.opacity(0.08), radius: 16, y: 8)
+        GlassPane(insets: EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14)) {
+            HStack(spacing: 16) {
+                previewContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.95), .white.opacity(0.35)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.08), radius: 16, y: 8)
 
-            VStack(spacing: 14) {
-                EGOSidebarCard {
-                    VStack(spacing: 6) {
-                        statusIndicator
-                        Text(orchestrator.statusMessage)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(EGOTheme.textSecondary)
+                VStack(spacing: 14) {
+                    EGOSidebarCard {
+                        VStack(spacing: 6) {
+                            statusIndicator
+                            Text(orchestrator.statusMessage)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(KE.ink2)
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
+
+                    egoStatsGrid
+
+                    wideFovToggleCard
+
+                    // fovDiagnosticCard  // disabled — see definition below
+
+                    Spacer()
+
+                    if let error = orchestrator.lastError {
+                        egoErrorView(error)
+                    }
+
+                    egoRecordButton
                 }
-
-                egoStatsGrid
-
-                Spacer()
-
-                if let error = orchestrator.lastError {
-                    egoErrorView(error)
-                }
-
-                egoRecordButton
+                .frame(width: 320)
             }
-            .frame(width: 320)
+            .padding(16)
         }
-        .padding(16)
     }
 
     // MARK: - Recording (reference-style chrome)
@@ -96,9 +133,6 @@ struct RecordingView: View {
             .padding(.top, 10)
 
             Spacer()
-
-            modeTogglePills
-                .padding(.bottom, 10)
 
             VStack(spacing: 12) {
                 egoStatsGrid
@@ -133,38 +167,6 @@ struct RecordingView: View {
             }
             .allowsHitTesting(false)
         }
-    }
-
-    private var modeTogglePills: some View {
-        HStack(spacing: 10) {
-            modePill(title: "hands", selected: handsGuideSelected, activeColor: EGOTheme.mint) {
-                handsGuideSelected = true
-                gazeGuideSelected = false
-            }
-            modePill(title: "gaze", selected: gazeGuideSelected, activeColor: EGOTheme.sky) {
-                gazeGuideSelected = true
-                handsGuideSelected = false
-            }
-        }
-    }
-
-    private func modePill(title: String, selected: Bool, activeColor: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(selected ? EGOTheme.textPrimary : .white.opacity(0.85))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background {
-                    Capsule()
-                        .fill(selected ? activeColor.opacity(0.85) : .white.opacity(0.14))
-                        .overlay {
-                            Capsule()
-                                .stroke(.white.opacity(0.25), lineWidth: 0.5)
-                        }
-                }
-        }
-        .buttonStyle(.plain)
     }
 
     private var recordingBottomBar: some View {
@@ -219,7 +221,7 @@ struct RecordingView: View {
 
     private var statusIndicator: some View {
         Circle()
-            .fill(orchestrator.isRecording ? EGOTheme.recordInner : EGOTheme.textMuted.opacity(0.4))
+            .fill(orchestrator.isRecording ? EGOTheme.recordInner : KE.ink3.opacity(0.4))
             .frame(width: 10, height: 10)
             .overlay {
                 if orchestrator.isRecording {
@@ -236,6 +238,8 @@ struct RecordingView: View {
         Group {
             if let session = orchestrator.captureSession {
                 CameraPreviewView(session: session)
+            } else if idlePreview.isReady {
+                CameraPreviewView(session: idlePreview.session)
             } else {
                 ZStack {
                     LinearGradient(
@@ -250,10 +254,10 @@ struct RecordingView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "camera.fill")
                             .font(.title2)
-                            .foregroundStyle(EGOTheme.textMuted.opacity(0.5))
-                        Text("Preview starts with recording")
+                            .foregroundStyle(KE.ink3.opacity(0.5))
+                        Text(idlePreview.statusMessage)
                             .font(.caption)
-                            .foregroundStyle(EGOTheme.textMuted.opacity(0.55))
+                            .foregroundStyle(KE.ink3.opacity(0.55))
                     }
                 }
             }
@@ -311,30 +315,124 @@ struct RecordingView: View {
         }
     }
 
+    // MARK: - FOV diagnostic (disabled)
+    //
+    // Temporarily disabled after the FOV ceiling was empirically confirmed
+    // (max diagonal FOV = 117.19° on the iPhone ultra-wide, below the 120°
+    // target). Re-enable by uncommenting the `@State` vars above, the
+    // `fovDiagnosticCard` reference in the sidebar, and the block below.
+    // The `FOVEnumerationDiagnostic` enum is kept compiled for quick reuse.
+    //
+    // private var fovDiagnosticCard: some View {
+    //     EGOSidebarCard {
+    //         VStack(alignment: .leading, spacing: 8) {
+    //             HStack(alignment: .firstTextBaseline, spacing: 8) {
+    //                 VStack(alignment: .leading, spacing: 2) {
+    //                     Text("Diagnóstico de FOV")
+    //                         .font(.subheadline.weight(.semibold))
+    //                         .foregroundStyle(KE.ink1)
+    //                     Text("Enumera câmeras e formatos ≥30fps")
+    //                         .font(.caption2)
+    //                         .foregroundStyle(KE.ink2)
+    //                 }
+    //                 Spacer(minLength: 6)
+    //             }
+    //             HStack(spacing: 8) {
+    //                 Button {
+    //                     runFOVDiagnostic()
+    //                 } label: {
+    //                     Text("Rodar")
+    //                         .font(.footnote.weight(.semibold))
+    //                         .padding(.horizontal, 12)
+    //                         .padding(.vertical, 6)
+    //                         .background(
+    //                             RoundedRectangle(cornerRadius: 8, style: .continuous)
+    //                                 .fill(KE.ink1.opacity(0.08))
+    //                         )
+    //                 }
+    //                 .buttonStyle(.plain)
+    //                 .disabled(orchestrator.isRecording)
+    //
+    //                 if fovDiagnosticShareURL != nil {
+    //                     Text("pronto para exportar")
+    //                         .font(.caption2)
+    //                         .foregroundStyle(KE.ink2)
+    //                 } else if let err = fovDiagnosticError {
+    //                     Text(err)
+    //                         .font(.caption2)
+    //                         .foregroundStyle(.red)
+    //                         .lineLimit(2)
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     .opacity(orchestrator.isRecording ? 0.5 : 1.0)
+    //     .sheet(isPresented: Binding(
+    //         get: { fovDiagnosticShareURL != nil },
+    //         set: { newValue in if !newValue { fovDiagnosticShareURL = nil } }
+    //     )) {
+    //         if let url = fovDiagnosticShareURL {
+    //             ShareSheet(activityItems: [url])
+    //         }
+    //     }
+    // }
+    //
+    // private func runFOVDiagnostic() {
+    //     fovDiagnosticError = nil
+    //     DispatchQueue.global(qos: .userInitiated).async {
+    //         do {
+    //             let url = try FOVEnumerationDiagnostic.runAndSave()
+    //             DispatchQueue.main.async {
+    //                 self.fovDiagnosticShareURL = url
+    //             }
+    //         } catch {
+    //             DispatchQueue.main.async {
+    //                 self.fovDiagnosticError = error.localizedDescription
+    //             }
+    //         }
+    //     }
+    // }
+
+    private var wideFovToggleCard: some View {
+        EGOSidebarCard {
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("FOV vertical estendido")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(KE.ink1)
+                    Text(wideFovEnabled.wrappedValue
+                         ? "4:3 · 1280×960 · 4 Mbps"
+                         : "16:9 · 1920×1080 · 6 Mbps")
+                        .font(.caption2)
+                        .foregroundStyle(KE.ink2)
+                        .monospacedDigit()
+                }
+                Spacer(minLength: 8)
+                Toggle("", isOn: wideFovEnabled)
+                    .labelsHidden()
+                    .tint(EGOTheme.recordInner)
+                    .disabled(orchestrator.isRecording)
+            }
+        }
+        .opacity(orchestrator.isRecording ? 0.5 : 1.0)
+    }
+
     private var egoRecordButton: some View {
         Button {
             if orchestrator.isRecording {
                 orchestrator.stopRecording()
             } else {
+                // Hand off the camera: stop the idle-preview AVCaptureSession
+                // before the orchestrator's VideoCaptureService tries to grab
+                // the same device inside `video.setup()`.
+                idlePreview.stop()
                 orchestrator.startRecording()
             }
         } label: {
-            HStack(spacing: 14) {
-                egoRecordButtonCoreLabel
-                Text(orchestrator.isRecording ? "Stop Recording" : "Start Recording")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
-            }
-            .frame(maxWidth: 300)
-            .frame(height: 56)
-            .padding(.horizontal, 8)
-            .background {
-                EGOGlassCapsuleBackground(
-                    tint: .custom(EGOTheme.recordInner),
-                    tintStrength: 1.0
-                )
-            }
+            KERecordPill(
+                isRecording: orchestrator.isRecording,
+                label: orchestrator.isRecording ? "Stop Recording" : "Start Recording"
+            )
         }
         .buttonStyle(.plain)
     }
@@ -406,13 +504,12 @@ struct EGOSidebarCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        content
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background {
-                EGOGlassBackground(cornerRadius: 18, tint: .neutral, tintStrength: 0.1)
-            }
+        GlassCard(cornerRadius: 18) {
+            content
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+        }
     }
 }
 
@@ -425,25 +522,254 @@ struct EGOStatCard: View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.caption2)
-                .foregroundStyle(EGOTheme.textSecondary.opacity(0.8))
+                .foregroundStyle(KE.ink2.opacity(0.8))
 
             Text(value)
                 .font(.subheadline.monospacedDigit().bold())
-                .foregroundStyle(EGOTheme.textPrimary)
+                .foregroundStyle(KE.ink1)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
 
             Text(title)
                 .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(EGOTheme.textMuted)
+                .foregroundStyle(KE.ink3)
                 .textCase(.uppercase)
                 .tracking(0.5)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .padding(.horizontal, 4)
-        .background {
-            EGOGlassBackground(cornerRadius: 14, tint: .neutral, tintStrength: 0.05)
+        .background(
+            Color(red: 240/255, green: 246/255, blue: 254/255).opacity(0.30)
+        )
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.45), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Start / Stop record pill (Ambient Glass)
+//
+// Visual rhythm matches `KEPillButton` on the Home screen: r:22 continuous,
+// thick glass dimmed to ~65%, tint wash, bevelled rim highlights. Variant is
+// always red (action is "commit to recording / stop") — matching the live
+// recording dot colour in `recordingChromeOverlay`.
+
+struct KERecordPill: View {
+    let isRecording: Bool
+    let label: String
+
+    private let tint = KE.accentRed
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+
+        HStack(spacing: 14) {
+            indicator
+            Text(label)
+                .font(.system(size: 17, weight: .semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .foregroundStyle(KE.ink1)
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, minHeight: 64)
+        .modifier(KERecordPillSurface(tint: tint, shape: shape))
+        .modifier(KERecordPillShadows(tint: tint))
+        .contentShape(shape)
+    }
+
+    // 14×14 dot per SPECS.md §2 — circle idle, rounded square while recording.
+    @ViewBuilder
+    private var indicator: some View {
+        ZStack {
+            if isRecording {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(.white)
+                    .frame(width: 14, height: 14)
+            } else {
+                Circle()
+                    .fill(.white)
+                    .frame(width: 14, height: 14)
+            }
+        }
+        .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+        .animation(.easeInOut(duration: 0.25), value: isRecording)
+    }
+}
+
+/// Glass surface for `KERecordPill`.
+///
+/// Because this pill lives inside a `GlassPane`, stacking a second Liquid
+/// Glass layer on top of it would cause the outer pane to composite the
+/// pill as part of its blur source — producing a milky, featureless
+/// result. On iOS 26 the pill is therefore a translucent tint tile that
+/// rides on top of the pane's native glass; older OSes keep the
+/// sheen + rim recipe.
+private struct KERecordPillSurface<S: InsettableShape>: ViewModifier {
+    let tint: Color
+    let shape: S
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .background(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.22), location: 0.0),
+                            .init(color: .white.opacity(0.0),  location: 0.55)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .background(tint.opacity(0.72))
+                .clipShape(shape)
+                .overlay(shape.strokeBorder(Color.white.opacity(0.45), lineWidth: 1))
+        } else {
+            content
+                .background(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.30), location: 0.0),
+                            .init(color: .white.opacity(0.0),  location: 0.6)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .background(tint.opacity(0.55))
+                .clipShape(shape)
+                .overlay(shape.strokeBorder(tint.opacity(0.55), lineWidth: 1))
+                .overlay(
+                    shape.inset(by: 1)
+                        .stroke(Color.white.opacity(0.55), lineWidth: 1.2)
+                        .blendMode(.overlay)
+                        .mask(
+                            LinearGradient(
+                                colors: [.white, .clear],
+                                startPoint: .top, endPoint: .center
+                            )
+                        )
+                )
+                .overlay(
+                    shape.inset(by: 1)
+                        .stroke(Color.black.opacity(0.18), lineWidth: 1.2)
+                        .blendMode(.overlay)
+                        .mask(
+                            LinearGradient(
+                                colors: [.clear, .white],
+                                startPoint: .center, endPoint: .bottom
+                            )
+                        )
+                )
+        }
+    }
+}
+
+/// Drop shadows cause SwiftUI to snapshot a view as an opaque layer for
+/// shadow rendering, which on iOS 26 breaks Liquid Glass refraction. Keep
+/// them for the legacy look and skip them when native glass is active.
+private struct KERecordPillShadows: ViewModifier {
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+        } else {
+            content
+                .shadow(color: tint.opacity(0.45), radius: 16, y: 4)
+                .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+        }
+    }
+}
+
+// MARK: - Idle camera preview
+//
+// Owns a lightweight AVCaptureSession that feeds the idle layout's preview
+// tile, so users see what the camera is pointed at before tapping
+// "Start Recording". The session is torn down the moment recording actually
+// begins — otherwise `VideoCaptureService.setup()` can't grab the same
+// hardware device and configuration fails.
+
+final class IdlePreviewSession: ObservableObject, @unchecked Sendable {
+    let session = AVCaptureSession()
+
+    @Published var isReady = false
+    @Published var statusMessage = "Preparing preview…"
+
+    // Only read/written from `queue`, which serialises access.
+    private var configured = false
+    private let queue = DispatchQueue(label: "idle.preview.session", qos: .userInitiated)
+
+    func start() {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        switch status {
+        case .authorized:
+            bringUpSession()
+        case .notDetermined:
+            publish { $0.statusMessage = "Requesting camera access…" }
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                guard let self else { return }
+                if granted {
+                    self.bringUpSession()
+                } else {
+                    self.publish { $0.statusMessage = "Camera access denied" }
+                }
+            }
+        case .denied, .restricted:
+            publish { $0.statusMessage = "Camera access denied" }
+        @unknown default:
+            publish { $0.statusMessage = "Camera unavailable" }
+        }
+    }
+
+    func stop() {
+        let sess = session
+        queue.async {
+            if sess.isRunning { sess.stopRunning() }
+        }
+        publish { $0.isReady = false }
+    }
+
+    private func bringUpSession() {
+        let sess = session
+        queue.async { [weak self] in
+            guard let self else { return }
+            if !self.configured {
+                sess.beginConfiguration()
+                sess.sessionPreset = .hd1280x720
+                let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+                    ?? AVCaptureDevice.default(for: .video)
+                if let cam = device,
+                   let input = try? AVCaptureDeviceInput(device: cam),
+                   sess.canAddInput(input) {
+                    sess.addInput(input)
+                }
+                sess.commitConfiguration()
+                self.configured = true
+            }
+            if !sess.isRunning {
+                sess.startRunning()
+            }
+            let running = sess.isRunning
+            self.publish {
+                $0.isReady = running
+                if !running { $0.statusMessage = "Preview unavailable" }
+            }
+        }
+    }
+
+    /// Hops back to MainActor to mutate `@Published` state safely from the
+    /// capture-session serial queue.
+    private func publish(_ mutate: @escaping @Sendable (IdlePreviewSession) -> Void) {
+        if Thread.isMainThread {
+            mutate(self)
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                mutate(self)
+            }
         }
     }
 }

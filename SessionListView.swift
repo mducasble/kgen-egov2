@@ -54,83 +54,82 @@ struct SessionListView: View {
         }
         .navigationTitle("Sessions")
         .toolbarBackground(.hidden, for: .navigationBar)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear {
             sessions = SessionManager.shared.listSessions()
         }
     }
 
     private var darkBackground: some View {
-        EGOBlobBackground()
+        AmbientImageBackdrop()
     }
 
     private var emptyState: some View {
         VStack(spacing: 14) {
             Image(systemName: "folder.badge.questionmark")
                 .font(.system(size: 44, weight: .light))
-                .foregroundStyle(EGOTheme.textMuted.opacity(0.6))
+                .foregroundStyle(KE.ink3)
 
             Text("No Sessions")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(EGOTheme.textPrimary)
+                .foregroundStyle(KE.ink1)
 
             Text("Recorded sessions will appear here")
                 .font(.subheadline)
-                .foregroundStyle(EGOTheme.textSecondary)
+                .foregroundStyle(KE.ink2)
         }
     }
 
     private func sessionRow(_ session: (id: String, directory: URL, date: Date)) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [EGOTheme.sky.opacity(0.45), EGOTheme.mint.opacity(0.35)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+        GlassCard {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [KE.accentBlue.opacity(0.55), KE.accentGreen.opacity(0.45)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 44, height: 44)
+                        .frame(width: 44, height: 44)
 
-                Image(systemName: "waveform.path.ecg.rectangle")
-                    .font(.title3)
-                    .foregroundStyle(EGOTheme.sky.opacity(0.95))
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(session.id)
-                    .font(.subheadline.monospaced().weight(.semibold))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .foregroundStyle(EGOTheme.textPrimary)
-
-                HStack(spacing: 8) {
-                    Text(formatDate(session.date))
-                        .font(.caption)
-                        .foregroundStyle(EGOTheme.textSecondary)
-
-                    Text("·")
-                        .foregroundStyle(EGOTheme.textMuted.opacity(0.5))
-
-                    Text(formatSize(SessionManager.shared.sessionSize(id: session.id)))
-                        .font(.caption)
-                        .foregroundStyle(EGOTheme.textSecondary)
+                    Image(systemName: "waveform.path.ecg.rectangle")
+                        .font(.title3)
+                        .foregroundStyle(KE.ink1)
                 }
 
-                uploadBadge(for: session.id)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(session.id)
+                        .font(.subheadline.monospaced().weight(.semibold))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .foregroundStyle(KE.ink1)
+
+                    HStack(spacing: 8) {
+                        Text(formatDate(session.date))
+                            .font(.caption)
+                            .foregroundStyle(KE.ink2)
+
+                        Text("·")
+                            .foregroundStyle(KE.ink3)
+
+                        Text(formatSize(SessionManager.shared.sessionSize(id: session.id)))
+                            .font(.caption)
+                            .foregroundStyle(KE.ink2)
+                    }
+
+                    uploadBadge(for: session.id)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(KE.ink3)
             }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(EGOTheme.textMuted.opacity(0.7))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background {
-            EGOGlassBackground(cornerRadius: 18, tint: .neutral, tintStrength: 0.05)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
     }
 
@@ -154,37 +153,37 @@ struct SessionListView: View {
                         .tint(.orange)
                     Text("Preparing...")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.orange.opacity(0.8))
+                        .foregroundStyle(Color.orange)
 
                 case .uploading:
                     ProgressView()
                         .scaleEffect(0.6)
-                        .tint(.blue)
+                        .tint(KE.accentBlue)
                     Text("\(state.completedFiles)/\(state.totalFiles)")
                         .font(.system(size: 10, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(.blue.opacity(0.8))
+                        .foregroundStyle(KE.accentBlue)
                     Text("uploading")
                         .font(.system(size: 10))
-                        .foregroundStyle(.blue.opacity(0.5))
+                        .foregroundStyle(KE.ink3)
 
                 case .completed:
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 10))
-                        .foregroundStyle(.green.opacity(0.7))
+                        .foregroundStyle(KE.accentGreen)
                     Text("Uploaded")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.green.opacity(0.7))
+                        .foregroundStyle(KE.accentGreen)
 
                 case .failed, .partiallyFailed:
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10))
-                        .foregroundStyle(.red.opacity(0.7))
+                        .foregroundStyle(KE.accentRed)
                     Text("\(state.failedFiles) failed")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.red.opacity(0.7))
+                        .foregroundStyle(KE.accentRed)
                     Text("· hold to retry")
                         .font(.system(size: 9))
-                        .foregroundStyle(EGOTheme.textMuted)
+                        .foregroundStyle(KE.ink3)
                 }
             }
         }
@@ -207,23 +206,24 @@ struct SessionDetailView: View {
 
     var body: some View {
         ZStack {
-            EGOBlobBackground()
+            AmbientImageBackdrop()
 
             ScrollView {
                 VStack(spacing: 14) {
-                    EGOSidebarCard {
+                    GlassCard {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("SESSION ID")
                                 .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(EGOTheme.textMuted)
+                                .foregroundStyle(KE.ink3)
                                 .tracking(0.8)
 
                             Text(sessionId)
                                 .font(.caption.monospaced())
-                                .foregroundStyle(EGOTheme.textPrimary)
+                                .foregroundStyle(KE.ink1)
                                 .textSelection(.enabled)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
                     }
 
                     VStack(spacing: 8) {
@@ -247,7 +247,7 @@ struct SessionDetailView: View {
         }
         .navigationTitle("Session")
         .toolbarBackground(.hidden, for: .navigationBar)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear { loadFiles() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -256,10 +256,10 @@ struct SessionDetailView: View {
                 } label: {
                     if isExportingZip {
                         ProgressView()
-                            .tint(EGOTheme.textMuted)
+                            .tint(KE.ink2)
                     } else {
                         Image(systemName: "arrow.down.doc")
-                            .foregroundStyle(EGOTheme.textPrimary.opacity(0.8))
+                            .foregroundStyle(KE.ink1)
                     }
                 }
                 .disabled(isExportingZip)
@@ -282,39 +282,38 @@ struct SessionDetailView: View {
     }
 
     private func artifactRow(file: (name: String, size: Int64, url: URL), tappable: Bool) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(colorForFile(file.name).opacity(0.12))
-                    .frame(width: 36, height: 36)
+        GlassCard(cornerRadius: 14) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(colorForFile(file.name).opacity(0.20))
+                        .frame(width: 36, height: 36)
 
-                Image(systemName: iconForFile(file.name))
-                    .font(.subheadline)
-                    .foregroundStyle(colorForFile(file.name).opacity(0.7))
+                    Image(systemName: iconForFile(file.name))
+                        .font(.subheadline)
+                        .foregroundStyle(KE.ink1)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(file.name)
+                        .font(.subheadline.monospaced().weight(.medium))
+                        .foregroundStyle(KE.ink1)
+
+                    Text(formatSize(file.size))
+                        .font(.caption2)
+                        .foregroundStyle(KE.ink3)
+                }
+
+                Spacer()
+
+                if tappable {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(KE.ink3)
+                }
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(file.name)
-                    .font(.subheadline.monospaced().weight(.medium))
-                    .foregroundStyle(EGOTheme.textPrimary)
-
-                Text(formatSize(file.size))
-                    .font(.caption2)
-                    .foregroundStyle(EGOTheme.textMuted)
-            }
-
-            Spacer()
-
-            if tappable {
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(EGOTheme.textMuted.opacity(0.5))
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background {
-            EGOGlassBackground(cornerRadius: 14, tint: .neutral, tintStrength: 0.04)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
         }
     }
 
@@ -382,7 +381,7 @@ struct JSONArtifactView: View {
 
     var body: some View {
         ZStack {
-            EGOBlobBackground()
+            AmbientImageBackdrop()
 
             Group {
                 if let loadError {
@@ -391,7 +390,7 @@ struct JSONArtifactView: View {
                     ScrollView {
                         Text(textContent)
                             .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(EGOTheme.textPrimary.opacity(0.85))
+                            .foregroundStyle(KE.ink1)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .textSelection(.enabled)
                             .padding()
@@ -402,12 +401,12 @@ struct JSONArtifactView: View {
         .navigationTitle(fileURL.lastPathComponent)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .safeAreaInset(edge: .bottom) {
             if isTruncated {
                 Text("Showing first \(maxChars) characters")
                     .font(.caption)
-                    .foregroundStyle(EGOTheme.textMuted)
+                    .foregroundStyle(KE.ink3)
                     .padding(.vertical, 8)
             }
         }

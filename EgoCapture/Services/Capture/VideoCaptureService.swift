@@ -22,9 +22,63 @@ protocol VideoCaptureDelegate: AnyObject {
 /// FOV is locked at hardware maximum (~106° horizontal / ~114° diagonal).
 /// Resolution targets 1920x1080; accepts 1280x720 if needed.
 final class VideoCaptureService: NSObject {
+    /// User-selectable capture preset. Defaults to the historical 16:9 1080p
+    /// profile; opting into `wideFov960p` targets a 4:3 format on the
+    /// ultra-wide camera to recover vertical FOV at the cost of a slightly
+    /// narrower horizontal FOV and a different aspect ratio.
+    enum CapturePreset: String, CaseIterable {
+        case standard1080p
+        case wideFov960p
+
+        /// UserDefaults key used to persist the user's preference across launches.
+        static let userDefaultsKey = "com.egocapture.capturePreset"
+
+        static var current: CapturePreset {
+            if let raw = UserDefaults.standard.string(forKey: userDefaultsKey),
+               let value = CapturePreset(rawValue: raw) {
+                return value
+            }
+            return .standard1080p
+        }
+
+        /// Ordered list of (width, height) pairs to try when selecting the
+        /// active format. The first match on the chosen camera wins.
+        var preferredSizes: [(Int32, Int32)] {
+            switch self {
+            case .standard1080p: return [(1920, 1080), (1280, 720)]
+            case .wideFov960p:   return [(1280, 960), (1920, 1440), (1920, 1080), (1280, 720)]
+            }
+        }
+
+        /// H.264 target bitrate, scaled with pixel count to keep ~0.1 bpp.
+        var targetBitrate: Int {
+            switch self {
+            case .standard1080p: return 6_000_000
+            case .wideFov960p:   return 4_000_000
+            }
+        }
+
+        /// Aspect ratio label recorded in the session metadata.
+        var aspectLabel: String {
+            switch self {
+            case .standard1080p: return "16:9"
+            case .wideFov960p:   return "4:3"
+            }
+        }
+
+        /// Human-readable short description for UI/diagnostics.
+        var displayName: String {
+            switch self {
+            case .standard1080p: return "1080p 16:9"
+            case .wideFov960p:   return "960p 4:3 (vertical FOV estendido)"
+            }
+        }
+    }
+
     let outputURL: URL
+    let preset: CapturePreset
     let targetFPS: Int = 30
-    let targetBitrate: Int = 6_000_000
+    var targetBitrate: Int { preset.targetBitrate }
     private let gopLength: Int = 30
     private let clock = MonotonicClock.shared
 
@@ -67,6 +121,19 @@ final class VideoCaptureService: NSObject {
     private(set) var exposurePolicy: String = "default"
     private(set) var formatDiagnostics: [[String: Any]] = []
 
+    /// Whether the device supports toggling Geometric Distortion Correction.
+    private(set) var gdcSupported: Bool = false
+    /// Device GDC state before we reconfigured it (Apple defaults to ON on ultra-wide).
+    private(set) var gdcEnabledAtSetup: Bool = false
+    /// Final GDC state after setup. When false, frames carry native sensor
+    /// barrel distortion; when true, Apple's ISP rectifies them (at a cost of FOV).
+    private(set) var gdcEnabled: Bool = false
+    /// Horizontal FOV (deg) as reported by the format with GDC in its default state.
+    private(set) var fovHorizontalWithGDCDeg: Double?
+    /// Horizontal FOV (deg) as reported after we turned GDC off. Present only
+    /// when we successfully disabled GDC.
+    private(set) var fovHorizontalWithoutGDCDeg: Double?
+
     private(set) var focalLengthFx: Double?
     private(set) var focalLengthFy: Double?
     private(set) var principalPointCx: Double?
@@ -94,8 +161,9 @@ final class VideoCaptureService: NSObject {
 
     weak var delegate: VideoCaptureDelegate?
 
-    init(outputURL: URL) {
+    init(outputURL: URL, preset: CapturePreset = .standard1080p) {
         self.outputURL = outputURL
+        self.preset = preset
         super.init()
     }
 
@@ -116,12 +184,47 @@ final class VideoCaptureService: NSObject {
         camera.activeVideoMinFrameDuration = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
         camera.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
 
+        // Geometric Distortion Correction: Apple enables GDC by default on the
+        // ultra-wide camera, which crops the sensor's native FOV to hide
+        // barrel distortion. We turn GDC off so the delivered frames match the
+        // sensor's full FOV. Consumers that need an undistorted image can
+        // rectify using the distortion metadata emitted in the session payload.
+        //
+        // Both FOV properties on `AVCaptureDevice.Format` are static:
+        //   - `videoFieldOfView`: horizontal FOV with GDC OFF (native, wider).
+        //   - `geometricDistortionCorrectedVideoFieldOfView`: horizontal FOV
+        //     with GDC ON (corrected, narrower). Defaults to 0 when the format
+        //     doesn't carry a distinct GDC-corrected FOV.
+        // The device toggle controls which of the two the delivered frames
+        // actually correspond to.
+        gdcSupported = camera.isGeometricDistortionCorrectionSupported
+        gdcEnabledAtSetup = camera.isGeometricDistortionCorrectionEnabled
+        let nativeFovDeg = Double(selection.format.videoFieldOfView)
+        let correctedFovDeg = Double(selection.format.geometricDistortionCorrectedVideoFieldOfView)
+        fovHorizontalWithoutGDCDeg = nativeFovDeg
+        if correctedFovDeg > 0 {
+            fovHorizontalWithGDCDeg = correctedFovDeg
+        }
+        if gdcSupported && gdcEnabledAtSetup {
+            camera.isGeometricDistortionCorrectionEnabled = false
+        }
+        gdcEnabled = camera.isGeometricDistortionCorrectionEnabled
+
         configureExposure(camera)
         camera.unlockForConfiguration()
         captureDevice = camera
 
         selectedLens = lensName(for: camera.deviceType)
-        let hFov = Double(selection.format.videoFieldOfView)
+        // `actualFovDeg` should describe the FOV of the delivered frames, so
+        // it tracks the current GDC state. If GDC ended up on (because the
+        // device/format didn't let us toggle it) and the format advertises a
+        // corrected FOV, use that value instead of the native one.
+        let hFov: Double = {
+            if gdcSupported && gdcEnabled, let corrected = fovHorizontalWithGDCDeg {
+                return corrected
+            }
+            return nativeFovDeg
+        }()
         usedUltraWide = camera.deviceType == .builtInUltraWideCamera || hFov > 100
         actualFovDeg = hFov
         diagonalFovDeg = Self.computeDiagonalFov(horizontalDeg: hFov, width: Int(d.width), height: Int(d.height))
@@ -133,20 +236,40 @@ final class VideoCaptureService: NSObject {
         principalPointCy = derived.cy
 
         fovSource = "avcapture_format"
-        fovMode = "hardware"
         fovLimitReached = true
-        fovLimitReason = "device_hardware_constraint"
+        if gdcSupported && !gdcEnabled && gdcEnabledAtSetup {
+            fovMode = "hardware_gdc_disabled"
+            fovLimitReason = "device_hardware_constraint_gdc_off"
+        } else if gdcSupported && gdcEnabled {
+            fovMode = "hardware_gdc_enabled"
+            fovLimitReason = "device_hardware_constraint_gdc_on"
+        } else {
+            fovMode = "hardware"
+            fovLimitReason = "device_hardware_constraint"
+        }
         selectedFormatDescription = selection.formatDescription
         orientationLocked = true
         orientation = "landscape"
 
         formatDiagnostics = Self.dumpAllFormats(device: camera, targetFPS: targetFPS)
         deviceMaxFov = formatDiagnostics.compactMap { $0["horizontalFovDeg"] as? Double }.max()
+        Self.logTopFovFormats(
+            device: camera, targetFPS: targetFPS,
+            selectedWidth: actualResolutionWidth, selectedHeight: actualResolutionHeight
+        )
 
         print("[VideoCaptureService] === IMU-Only Mode ===")
+        print("[VideoCaptureService] Preset: \(preset.displayName) | bitrate=\(targetBitrate / 1_000_000) Mbps")
         print("[VideoCaptureService] Device: \(camera.deviceType.rawValue)")
         print("[VideoCaptureService] Ultra-wide: \(usedUltraWide)")
         print("[VideoCaptureService] Horizontal FOV: \(String(format: "%.1f", hFov))° | Diagonal: \(String(format: "%.1f", diagonalFovDeg ?? 0))°")
+        if gdcSupported {
+            let onFov = fovHorizontalWithGDCDeg.map { String(format: "%.1f°", $0) } ?? "n/a"
+            let offFov = fovHorizontalWithoutGDCDeg.map { String(format: "%.1f°", $0) } ?? "n/a"
+            print("[VideoCaptureService] GDC: supported=true defaultEnabled=\(gdcEnabledAtSetup) nowEnabled=\(gdcEnabled) | fovH(native/GDC off)=\(offFov) fovH(corrected/GDC on)=\(onFov)")
+        } else {
+            print("[VideoCaptureService] GDC: not supported on this device/format")
+        }
         print("[VideoCaptureService] Resolution: \(d.width)x\(d.height)")
         print("[VideoCaptureService] Exposure: \(exposurePolicy)")
 
@@ -373,9 +496,12 @@ final class VideoCaptureService: NSObject {
         let maxFov = candidates.map(\.fov).max()!
         let topTier = candidates.filter { maxFov - $0.fov < 1.0 }
 
-        let preferredSizes: [(Int32, Int32)] = [(1920, 1080), (1280, 720)]
-        for (pw, ph) in preferredSizes {
-            if let match = topTier.first(where: { $0.w == pw && $0.h == ph }) {
+        // Preset-driven preference: exact size match wins over the max-FOV
+        // tier. This lets the user opt into 4:3 formats whose horizontal FOV
+        // is slightly below the camera's peak but whose vertical / diagonal
+        // coverage is larger.
+        for (pw, ph) in preset.preferredSizes {
+            if let match = candidates.first(where: { $0.w == pw && $0.h == ph }) {
                 return makeSelection(device, match.format)
             }
         }
@@ -391,7 +517,8 @@ final class VideoCaptureService: NSObject {
     private func makeSelection(_ device: AVCaptureDevice, _ format: AVCaptureDevice.Format) -> CameraFormatSelection {
         let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
         let fov = format.videoFieldOfView
-        let desc = "\(device.deviceType.rawValue) \(dims.width)x\(dims.height) fov=\(String(format: "%.1f", Double(fov)))°"
+        let aspect = Self.classifyAspect(width: dims.width, height: dims.height)
+        let desc = "\(device.deviceType.rawValue) \(dims.width)x\(dims.height) \(aspect) fov=\(String(format: "%.1f", Double(fov)))° preset=\(preset.rawValue)"
         return CameraFormatSelection(device: device, format: format, formatDescription: desc)
     }
 
@@ -422,19 +549,77 @@ final class VideoCaptureService: NSObject {
         for (i, format) in device.formats.enumerated() {
             let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
             let fov = format.videoFieldOfView
+            let gdcFov = format.geometricDistortionCorrectedVideoFieldOfView
             let fpsRanges = format.videoSupportedFrameRateRanges
             let maxFPS = fpsRanges.map(\.maxFrameRate).max() ?? 0
             let minFPS = fpsRanges.map(\.minFrameRate).min() ?? 0
             let supports30 = fpsRanges.contains { $0.maxFrameRate >= Double(targetFPS) }
             let dFov = computeDiagonalFov(horizontalDeg: Double(fov), width: Int(dims.width), height: Int(dims.height))
+            let aspectNumeric = dims.height > 0 ? Double(dims.width) / Double(dims.height) : 0
+            let aspectLabel = classifyAspect(width: dims.width, height: dims.height)
 
             results.append([
                 "index": i, "width": Int(dims.width), "height": Int(dims.height),
-                "horizontalFovDeg": Double(fov), "diagonalFovDeg": dFov,
-                "minFPS": minFPS, "maxFPS": maxFPS, "supports30fps": supports30, "isSelected": false
+                "aspectRatio": aspectLabel, "aspectRatioNumeric": aspectNumeric,
+                "horizontalFovDeg": Double(fov),
+                "gdcCorrectedHorizontalFovDeg": Double(gdcFov),
+                "gdcReducesFov": gdcFov > 0 && gdcFov < fov - 0.01,
+                "diagonalFovDeg": dFov,
+                "minFPS": minFPS, "maxFPS": maxFPS,
+                "supports30fps": supports30, "isSelected": false
             ])
         }
         return results
+    }
+
+    static func classifyAspect(width: Int32, height: Int32) -> String {
+        guard width > 0, height > 0 else { return "unknown" }
+        let ratio = Double(width) / Double(height)
+        let candidates: [(String, Double)] = [
+            ("16:9", 16.0 / 9.0),
+            ("4:3", 4.0 / 3.0),
+            ("3:2", 3.0 / 2.0),
+            ("1:1", 1.0),
+            ("21:9", 21.0 / 9.0),
+            ("5:4", 5.0 / 4.0)
+        ]
+        var best = ("other", Double.infinity)
+        for (label, r) in candidates {
+            let delta = abs(ratio - r)
+            if delta < best.1 { best = (label, delta) }
+        }
+        return best.1 < 0.02 ? best.0 : String(format: "%.3f:1", ratio)
+    }
+
+    /// Logs the top N formats sorted by diagonal FOV. Useful to see at a
+    /// glance whether a non-selected (e.g., 4:3) format would deliver more
+    /// total FOV than the currently selected one.
+    static func logTopFovFormats(device: AVCaptureDevice, targetFPS: Int, selectedWidth: Int, selectedHeight: Int, topN: Int = 6) {
+        let diag = dumpAllFormats(device: device, targetFPS: targetFPS)
+            .filter { ($0["supports30fps"] as? Bool) == true }
+            .sorted { (lhs, rhs) in
+                let ld = lhs["diagonalFovDeg"] as? Double ?? 0
+                let rd = rhs["diagonalFovDeg"] as? Double ?? 0
+                return ld > rd
+            }
+        let slice = diag.prefix(topN)
+        print("[VideoCaptureService] Top \(slice.count) format(s) by diagonal FOV (>=\(targetFPS)fps):")
+        for entry in slice {
+            let w = entry["width"] as? Int ?? 0
+            let h = entry["height"] as? Int ?? 0
+            let aspect = entry["aspectRatio"] as? String ?? "?"
+            let hFov = entry["horizontalFovDeg"] as? Double ?? 0
+            let gdcFov = entry["gdcCorrectedHorizontalFovDeg"] as? Double ?? 0
+            let dFov = entry["diagonalFovDeg"] as? Double ?? 0
+            let gdcReduces = entry["gdcReducesFov"] as? Bool ?? false
+            let marker = (w == selectedWidth && h == selectedHeight) ? "★" : " "
+            let gdcInfo = gdcReduces
+                ? String(format: "gdcFov=%.1f° (crops %.1f°)", gdcFov, hFov - gdcFov)
+                : "gdcFov=n/a"
+            let hFovStr = String(format: "%.1f°", hFov)
+            let dFovStr = String(format: "%.1f°", dFov)
+            print("  \(marker) \(w)x\(h) \(aspect) hFov=\(hFovStr) dFov=\(dFovStr) \(gdcInfo)")
+        }
     }
 
     func writeDiagnostics(to directory: URL) {

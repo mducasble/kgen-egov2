@@ -32,6 +32,12 @@ final class RecordingOrchestrator: ObservableObject {
     private var recordingStartEpochMs: Double = 0
     private var durationTimer: Timer?
 
+    /// Populated once per session by `LensDistortionProbeService.ensureCalibration`.
+    /// When non-nil, downstream metadata emits `distortionModel = "plumb_bob"`
+    /// and attaches the fitted coefficients. When nil, we fall back to the
+    /// GDC-state-based model (`uncorrected_barrel` / `apple_isp_corrected`).
+    private var lensCalibration: LensDistortionCalibration?
+
     /// Frame counter for throttled UI updates.
     nonisolated(unsafe) private var lastUIUpdateFrame: Int = 0
 
@@ -40,17 +46,17 @@ final class RecordingOrchestrator: ObservableObject {
     func startRecording() {
         guard !isRecording else { return }
         statusMessage = "Checking permissions..."
-        Task {
+        Task { @MainActor in
             let ok = await ensureCameraPermission()
             guard ok else { return }
-            await MainActor.run { self.activateAudioSession() }
-            await MainActor.run { self.statusMessage = "Preparing..." }
+            self.activateAudioSession()
+            self.statusMessage = "Preparing..."
             try? await Task.sleep(nanoseconds: 500_000_000)
-            await MainActor.run { self.startRecordingInternal() }
+            await self.startRecordingInternal()
         }
     }
 
-    private func startRecordingInternal() {
+    private func startRecordingInternal() async {
         lastError = nil; statusMessage = "Starting..."
         UIApplication.shared.isIdleTimerDisabled = true
         let session = SessionManager.shared.createSession()
@@ -63,10 +69,27 @@ final class RecordingOrchestrator: ObservableObject {
             try imu.start(outputURL: SessionFiles.url("imu", "jsonl", in: dir), epochStartMs: recordingStartEpochMs)
             imuCaptureService = imu
 
-            let video = VideoCaptureService(outputURL: SessionFiles.url("video", "mp4", in: dir))
+            // Lens-distortion probe (Phase 3). Opportunistic and silent:
+            //   - cache hit   → < 1 ms, no user-visible effect.
+            //   - cache miss  → ~200 ms probe (runs before VideoCaptureService
+            //                  claims the UW hardware so the virtual
+            //                  multi-camera device it opens can access the
+            //                  shared constituent).
+            //   - unsupported → negative cache ensures we skip the probe on
+            //                  subsequent sessions; no delay.
+            // On failure the pipeline keeps running and metadata falls back to
+            // `uncorrected_barrel` without coefficients.
+            self.lensCalibration = await LensDistortionProbeService.ensureCalibration()
+
+            let preset = VideoCaptureService.CapturePreset.current
+            let video = VideoCaptureService(
+                outputURL: SessionFiles.url("video", "mp4", in: dir),
+                preset: preset
+            )
             video.delegate = self; videoCaptureService = video
             try video.setup()
             captureSession = video.captureSession
+
             try video.startRecording(epochStartMs: recordingStartEpochMs)
 
             isRecording = true; statusMessage = "Recording"
@@ -183,25 +206,92 @@ final class RecordingOrchestrator: ObservableObject {
             ? "avcapture_camera_intrinsic_matrix"
             : "pinhole_derived_from_fov"
 
+        let gdcSupported = videoCaptureService?.gdcSupported ?? false
+        let gdcEnabled = videoCaptureService?.gdcEnabled ?? true
+
+        // Distortion model: prefer the probe-fitted plumb_bob when available
+        // (Phase 3). Fall back to the GDC-state-based stub when the probe
+        // didn't run or failed.
+        let distortionModelValue: String
+        let distortionNoteValue: String
+        let distortionCoefficientsValue: [Double]?
+        let distortionResidualPxValue: Double?
+        let probeIntrinsicsSourceValue: String?
+        let probeFx: Double?
+        let probeFy: Double?
+        let probeCx: Double?
+        let probeCy: Double?
+
+        if let cal = lensCalibration {
+            let scaled = cal.scaledIntrinsics(recordingWidth: resW, recordingHeight: resH)
+            distortionModelValue = "plumb_bob"
+            distortionCoefficientsValue = cal.distortionCoefficients
+            distortionResidualPxValue = scaled.fitResidualRmsPx
+            distortionNoteValue = String(
+                format: "Radial plumb_bob coefficients [k1,k2,p1=0,p2=0,k3] fitted from AVCameraCalibrationData via a probe session on a virtual multi-camera device. Fit quality: RMS = %.3f px at recording resolution from %d samples. Tangential coefficients are fixed at zero; modern iPhone lenses exhibit tangential residuals below 1e-4 in practice.",
+                scaled.fitResidualRmsPx, cal.fitSamples
+            )
+            probeIntrinsicsSourceValue = "avcapture_photo_calibration_fitted"
+            probeFx = scaled.fx
+            probeFy = scaled.fy
+            probeCx = scaled.cx
+            probeCy = scaled.cy
+        } else if gdcSupported && !gdcEnabled {
+            distortionModelValue = "uncorrected_barrel"
+            distortionNoteValue = "Geometric Distortion Correction is disabled to recover the ultra-wide camera's native FOV. Frames carry lens barrel distortion; the calibration probe did not run or failed, so no explicit coefficients are provided."
+            distortionCoefficientsValue = nil
+            distortionResidualPxValue = nil
+            probeIntrinsicsSourceValue = nil
+            probeFx = nil; probeFy = nil; probeCx = nil; probeCy = nil
+        } else if gdcSupported && gdcEnabled {
+            distortionModelValue = "apple_isp_corrected"
+            distortionNoteValue = "Frames are geometrically pre-rectified by Apple's ISP (GDC on). Residual distortion is small but unquantified; the calibration probe did not run or failed."
+            distortionCoefficientsValue = nil
+            distortionResidualPxValue = nil
+            probeIntrinsicsSourceValue = nil
+            probeFx = nil; probeFy = nil; probeCx = nil; probeCy = nil
+        } else {
+            distortionModelValue = "apple_isp_corrected"
+            distortionNoteValue = "Frames are geometrically pre-rectified by Apple's ISP before delivery. Residual distortion is small but unquantified; the calibration probe did not run or failed."
+            distortionCoefficientsValue = nil
+            distortionResidualPxValue = nil
+            probeIntrinsicsSourceValue = nil
+            probeFx = nil; probeFy = nil; probeCx = nil; probeCy = nil
+        }
+
+        // Prefer the probe's fitted intrinsics over the measured-per-frame
+        // ones when available; the probe's K is the same lens but tied to the
+        // distortion fit, which keeps D and K self-consistent.
+        let finalFx = probeFx ?? videoCaptureService?.focalLengthFx
+        let finalFy = probeFy ?? videoCaptureService?.focalLengthFy
+        let finalCx = probeCx ?? videoCaptureService?.principalPointCx
+        let finalCy = probeCy ?? videoCaptureService?.principalPointCy
+        let finalIntrinsicsSource = probeIntrinsicsSourceValue ?? intrinsicsSourceValue
+        let finalIntrinsicsMode = (lensCalibration != nil)
+            ? "measured_per_device_probe_fit"
+            : intrinsicsModeValue
+
         let cameraIntrinsics = SessionMetadata.CameraIntrinsics(
-            intrinsicsMode: intrinsicsModeValue,
+            intrinsicsMode: finalIntrinsicsMode,
             deviceModel: deviceInfo.model,
             lens: selectedLens,
             resolution: SessionMetadata.CameraIntrinsics.Resolution(width: resW, height: resH),
             fovHorizontalDeg: cameraActualFovDeg,
             fovDiagonalDeg: diagonalFovDeg,
             principalPoint: SessionMetadata.CameraIntrinsics.PrincipalPoint(
-                cx: videoCaptureService?.principalPointCx,
-                cy: videoCaptureService?.principalPointCy
+                cx: finalCx,
+                cy: finalCy
             ),
             focalLengthPixels: SessionMetadata.CameraIntrinsics.FocalLength(
-                fx: videoCaptureService?.focalLengthFx,
-                fy: videoCaptureService?.focalLengthFy
+                fx: finalFx,
+                fy: finalFy
             ),
-            intrinsicsSource: intrinsicsSourceValue,
-            distortionModel: "apple_isp_corrected",
+            intrinsicsSource: finalIntrinsicsSource,
+            distortionModel: distortionModelValue,
             distortionPresent: true,
-            distortionNote: "Frames are geometrically pre-rectified by Apple's ISP before delivery. Residual distortion is small but unquantified; exact distortion coefficients are not exposed by AVFoundation in video capture mode."
+            distortionNote: distortionNoteValue,
+            distortionCoefficients: distortionCoefficientsValue,
+            distortionFitResidualRmsPx: distortionResidualPxValue
         )
 
         // Camera extrinsics
@@ -435,6 +525,7 @@ final class RecordingOrchestrator: ObservableObject {
     private func cleanup() {
         captureSession = nil
         videoCaptureService = nil; imuCaptureService = nil
+        lensCalibration = nil
     }
 
     private func ensureCameraPermission() async -> Bool {

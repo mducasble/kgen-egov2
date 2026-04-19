@@ -144,6 +144,13 @@ struct SessionMetadata: Codable {
         let distortionModel: String
         let distortionPresent: Bool
         let distortionNote: String
+        /// plumb_bob coefficients `[k1, k2, p1, p2, k3]` when available from
+        /// the lens-distortion probe; omitted when the probe did not run or
+        /// failed (in which case `distortionModel` stays `"uncorrected_barrel"`
+        /// or `"apple_isp_corrected"`).
+        let distortionCoefficients: [Double]?
+        /// Diagnostic confidence for the fit (pixels at recording resolution).
+        let distortionFitResidualRmsPx: Double?
 
         struct Resolution: Codable { let width: Int; let height: Int }
         struct PrincipalPoint: Codable { let cx: Double?; let cy: Double? }

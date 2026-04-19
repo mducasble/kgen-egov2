@@ -152,13 +152,33 @@ def camera_calibration(
     raw_model = str(intr.get("distortionModel") or "").lower()
     distortion_model = _DISTORTION_MAP.get(raw_model, "none")
     distortion_present = bool(intr.get("distortionPresent"))
-    # iOS doesn't export per-coefficient distortion values (the device model
-    # is rectified by AVFoundation); emit a zero-vector so consumers can
-    # trust the shape while still seeing "no distortion correction needed".
+
+    # Phase 3: iOS now ships fitted plumb_bob coefficients when the lens
+    # calibration probe succeeds. Prefer those over the zero-vector stub.
+    raw_coeffs = intr.get("distortionCoefficients")
+    parsed_coeffs: list[float] = []
+    if isinstance(raw_coeffs, (list, tuple)):
+        for v in raw_coeffs:
+            f = _safe_float(v)
+            if f is None:
+                parsed_coeffs = []
+                break
+            parsed_coeffs.append(f)
+
     if distortion_model == "plumb_bob":
-        d_coeffs = [0.0, 0.0, 0.0, 0.0, 0.0]
+        if len(parsed_coeffs) == 5:
+            d_coeffs = parsed_coeffs
+        elif len(parsed_coeffs) >= 5:
+            d_coeffs = parsed_coeffs[:5]
+        else:
+            # Keep the shape non-empty for consumers that assume D has length 5;
+            # values of zero signal "no usable calibration".
+            d_coeffs = [0.0, 0.0, 0.0, 0.0, 0.0]
     elif distortion_model == "rational_polynomial":
-        d_coeffs = [0.0] * 8
+        if len(parsed_coeffs) == 8:
+            d_coeffs = parsed_coeffs
+        else:
+            d_coeffs = [0.0] * 8
     else:
         d_coeffs = []
     if not distortion_present and distortion_model != "none":
@@ -224,8 +244,12 @@ def frame_transform(
 # Session metadata (1x, at session start)
 # ----------------------------------------------------------------------------
 
-# Minimum valid session length required by the target schema.
-MIN_DURATION_NS = 120_000_000_000
+# Figure/HumynLabs spec requires ``duration_ns >= 120 s``. We intentionally
+# emit the measured value as-is: short test sessions (< 120 s) will fail
+# strict schema validation downstream, but the ground truth is preserved
+# which is what we want for internal diagnostics. Production sessions run
+# well above 120 s and are unaffected.
+SPEC_MIN_DURATION_SEC = 120.0
 
 
 def session_metadata(
@@ -238,14 +262,12 @@ def session_metadata(
     start_ms = metadata.get("startTimeEpochMs") or 0
     duration_sec = float(metadata.get("durationSec") or 0)
     duration_ns = int(round(duration_sec * 1_000_000_000))
-    if duration_ns < MIN_DURATION_NS:
-        # Figure spec hard-requires >= 120 s. Clamp so the message still
-        # validates; the measured duration is preserved on the metrics side.
-        log.warning(
-            "session duration %.2fs < 120s minimum — clamping schema field",
+    if duration_sec < SPEC_MIN_DURATION_SEC:
+        log.info(
+            "session duration %.2fs < %.0fs Figure minimum — emitting real value; schema may reject",
             duration_sec,
+            SPEC_MIN_DURATION_SEC,
         )
-        duration_ns = MIN_DURATION_NS
 
     device = metadata.get("device") or {}
     capture = metadata.get("capture") or {}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="uuid-b3d72929-436a-4266-8ac3-628e93eb934f" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 174.97 174.8">
+  <defs>
+    
+  </defs>
+  <g id="uuid-177605cc-2ee1-490f-9ab9-f8c345da1fa2" data-name="Layer 1">
+    <g>
+      <rect class="uuid-32f10b22-daf0-4466-82e0-138f46eea6ad" x=".05" y=".02" width="20.07" height="26.1"></rect>
+      <path class="uuid-32f10b22-daf0-4466-82e0-138f46eea6ad" d="M125.78,31.44v16.05h33.14v16.97h-47.91V16.07h63.91V.02h-62.74c-9.84,0-17.83,7.98-17.83,17.83v44.85c0,9.84,7.98,17.83,17.83,17.83h62.79V31.44h-49.2Z"></path>
+      <path class="uuid-32f10b22-daf0-4466-82e0-138f46eea6ad" d="M0,112.11v44.85c0,9.84,7.98,17.83,17.83,17.83h62.74v-16.05H16.66v-48.4h46.1v16.97h-31.33v16.05h49.2v-49.08H17.83c-9.84,0-17.83,7.98-17.83,17.83Z"></path>
+      <rect class="uuid-32f10b22-daf0-4466-82e0-138f46eea6ad" x=".05" y="54.42" width="20.07" height="26.1"></rect>
+      <rect class="uuid-32f10b22-daf0-4466-82e0-138f46eea6ad" x="94.35" y="143.37" width="20.07" height="31.42"></rect>
+      <rect class="uuid-32f10b22-daf0-4466-82e0-138f46eea6ad" x="154.9" y="94.29" width="20.07" height="31.42"></rect>
+      <polygon class="uuid-32f10b22-daf0-4466-82e0-138f46eea6ad" points="21.28 40.27 66.98 80.54 80.62 80.54 80.62 66.9 50.37 40.27 80.62 13.64 80.62 .02 66.98 0 21.28 40.27"></polygon>
+      <polygon class="uuid-32f10b22-daf0-4466-82e0-138f46eea6ad" points="94.39 94.29 94.39 108.53 160.66 174.8 174.9 174.8 174.9 160.56 108.63 94.29 94.39 94.29"></polygon>
+    </g>
+  </g>
+</svg>

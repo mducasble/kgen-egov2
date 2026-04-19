@@ -33,6 +33,10 @@
 		AA000031 /* IMUCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000031 /* IMUCaptureService.swift */; };
 		AA000033 /* CameraCalibrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000033 /* CameraCalibrationService.swift */; };
 		AA000034 /* MountCalibrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000034 /* MountCalibrationService.swift */; };
+		AA000044 /* FOVEnumerationDiagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000044 /* FOVEnumerationDiagnostic.swift */; };
+		AA000045 /* LensDistortionCalibration.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000045 /* LensDistortionCalibration.swift */; };
+		AA000046 /* PlumbBobFitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000046 /* PlumbBobFitter.swift */; };
+		AA000047 /* LensDistortionProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000047 /* LensDistortionProbeService.swift */; };
 		AA000040 /* HandLandmarkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000040 /* HandLandmarkService.swift */; };
 		AA000041 /* HandPoseDerivationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000041 /* HandPoseDerivationService.swift */; };
 		AA000042 /* FacePresenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000042 /* FacePresenceService.swift */; };
@@ -52,6 +56,8 @@
 		AA000089 /* CampaignConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000089 /* CampaignConfig.swift */; };
 		AA000087 /* SessionUploadNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000087 /* SessionUploadNotification.swift */; };
 		AA000090 /* EGOTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000090 /* EGOTheme.swift */; };
+		AA000091 /* KGenEyeHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000091 /* KGenEyeHomeView.swift */; };
+		AA000092 /* Orbitron.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AB000092 /* Orbitron.ttf */; };
 		BA100001 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = BA100002 /* hand_landmarker.task */; };
 /* End PBXBuildFile section */
 
@@ -84,6 +90,10 @@
 		AB000031 /* IMUCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMUCaptureService.swift; sourceTree = "<group>"; };
 		AB000033 /* CameraCalibrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCalibrationService.swift; sourceTree = "<group>"; };
 		AB000034 /* MountCalibrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MountCalibrationService.swift; sourceTree = "<group>"; };
+		AB000044 /* FOVEnumerationDiagnostic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FOVEnumerationDiagnostic.swift; sourceTree = "<group>"; };
+		AB000045 /* LensDistortionCalibration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensDistortionCalibration.swift; sourceTree = "<group>"; };
+		AB000046 /* PlumbBobFitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumbBobFitter.swift; sourceTree = "<group>"; };
+		AB000047 /* LensDistortionProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensDistortionProbeService.swift; sourceTree = "<group>"; };
 		AB000040 /* HandLandmarkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandLandmarkService.swift; sourceTree = "<group>"; };
 		AB000041 /* HandPoseDerivationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandPoseDerivationService.swift; sourceTree = "<group>"; };
 		AB000042 /* FacePresenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacePresenceService.swift; sourceTree = "<group>"; };
@@ -104,6 +114,8 @@
 		AB000087 /* SessionUploadNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUploadNotification.swift; sourceTree = "<group>"; };
 		AB000088 /* S3Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3Config.swift; sourceTree = "<group>"; };
 		AB000090 /* EGOTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EGOTheme.swift; sourceTree = "<group>"; };
+		AB000091 /* KGenEyeHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KGenEyeHomeView.swift; sourceTree = "<group>"; };
+		AB000092 /* Orbitron.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Orbitron.ttf"; sourceTree = "<group>"; };
 		AC000001 /* EgoCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EgoCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA100002 /* hand_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = hand_landmarker.task; sourceTree = "<group>"; };
 		EFFC6E6639E6CD6374415719 /* Pods-EgoCapture.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EgoCapture.release.xcconfig"; path = "Target Support Files/Pods-EgoCapture/Pods-EgoCapture.release.xcconfig"; sourceTree = "<group>"; };
@@ -149,6 +161,7 @@
 				AE000007 /* Views */,
 				AE000008 /* Utils */,
 				AB000070 /* Assets.xcassets */,
+				AB000092 /* Orbitron.ttf */,
 				BA100002 /* hand_landmarker.task */,
 				AB000080 /* Info.plist */,
 			);
@@ -170,6 +183,7 @@
 				AB000018 /* SessionMetadata.swift */,
 				AB000019 /* SessionManifest.swift */,
 				AB000020 /* VideoTimestamp.swift */,
+				AB000045 /* LensDistortionCalibration.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -179,10 +193,19 @@
 			children = (
 				AE000005 /* Capture */,
 				AE000006 /* Vision */,
+				AE000011 /* Diagnostics */,
 				AE000009 /* Packaging */,
 				AE000010 /* Upload */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		AE000011 /* Diagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				AB000044 /* FOVEnumerationDiagnostic.swift */,
+			);
+			path = Diagnostics;
 			sourceTree = "<group>";
 		};
 		AE000005 /* Capture */ = {
@@ -196,6 +219,8 @@
 				05B4C0D02F908A100027BA91 /* HeadPoseService.swift */,
 				AB000033 /* CameraCalibrationService.swift */,
 				AB000034 /* MountCalibrationService.swift */,
+				AB000046 /* PlumbBobFitter.swift */,
+				AB000047 /* LensDistortionProbeService.swift */,
 			);
 			path = Capture;
 			sourceTree = "<group>";
@@ -220,6 +245,7 @@
 				AB000004 /* SessionListView.swift */,
 				AB000005 /* SettingsView.swift */,
 				AB000006 /* CameraPreviewView.swift */,
+				AB000091 /* KGenEyeHomeView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -335,6 +361,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000070 /* Assets.xcassets in Resources */,
+				AA000092 /* Orbitron.ttf in Resources */,
 				BA100001 /* hand_landmarker.task in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -412,6 +439,7 @@
 				05B4C0D42F908C100027BA91 /* SyncAnalysisService.swift in Sources */,
 				AA000001 /* EgoCaptureApp.swift in Sources */,
 				AA000090 /* EGOTheme.swift in Sources */,
+				AA000091 /* KGenEyeHomeView.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
 				AA000003 /* RecordingView.swift in Sources */,
 				AA000004 /* SessionListView.swift in Sources */,
@@ -445,6 +473,10 @@
 				AA000033 /* CameraCalibrationService.swift in Sources */,
 				05B4C0D32F908B800027BA91 /* TechnicalValidation.swift in Sources */,
 				AA000034 /* MountCalibrationService.swift in Sources */,
+				AA000044 /* FOVEnumerationDiagnostic.swift in Sources */,
+				AA000045 /* LensDistortionCalibration.swift in Sources */,
+				AA000046 /* PlumbBobFitter.swift in Sources */,
+				AA000047 /* LensDistortionProbeService.swift in Sources */,
 				AA000040 /* HandLandmarkService.swift in Sources */,
 				AA000041 /* HandPoseDerivationService.swift in Sources */,
 				AA000042 /* FacePresenceService.swift in Sources */,
