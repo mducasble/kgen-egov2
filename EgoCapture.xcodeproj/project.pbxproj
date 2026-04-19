@@ -12,6 +12,7 @@
 		05B4C0D42F908C100027BA91 /* SyncAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05B4C0C72F9081B50027BA91 /* SyncAnalysisService.swift */; };
 		05EF77662F90772500F39AF2 /* MonotonicClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05EF77652F90772500F39AF2 /* MonotonicClock.swift */; };
 		05EF77682F90775700F39AF2 /* RecordingOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05EF77672F90775700F39AF2 /* RecordingOrchestrator.swift */; };
+		4D7247BAC2C9BF14F2636C21 /* Pods_EgoCapture.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29E02DA0D79A712E8205D5D7 /* Pods_EgoCapture.framework */; };
 		AA000001 /* EgoCaptureApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000001 /* EgoCaptureApp.swift */; };
 		AA000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000002 /* ContentView.swift */; };
 		AA000003 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000003 /* RecordingView.swift */; };
@@ -33,14 +34,14 @@
 		AA000031 /* IMUCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000031 /* IMUCaptureService.swift */; };
 		AA000033 /* CameraCalibrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000033 /* CameraCalibrationService.swift */; };
 		AA000034 /* MountCalibrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000034 /* MountCalibrationService.swift */; };
-		AA000044 /* FOVEnumerationDiagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000044 /* FOVEnumerationDiagnostic.swift */; };
-		AA000045 /* LensDistortionCalibration.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000045 /* LensDistortionCalibration.swift */; };
-		AA000046 /* PlumbBobFitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000046 /* PlumbBobFitter.swift */; };
-		AA000047 /* LensDistortionProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000047 /* LensDistortionProbeService.swift */; };
 		AA000040 /* HandLandmarkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000040 /* HandLandmarkService.swift */; };
 		AA000041 /* HandPoseDerivationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000041 /* HandPoseDerivationService.swift */; };
 		AA000042 /* FacePresenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000042 /* FacePresenceService.swift */; };
 		AA000043 /* FrameQCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000043 /* FrameQCService.swift */; };
+		AA000044 /* FOVEnumerationDiagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000044 /* FOVEnumerationDiagnostic.swift */; };
+		AA000045 /* LensDistortionCalibration.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000045 /* LensDistortionCalibration.swift */; };
+		AA000046 /* PlumbBobFitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000046 /* PlumbBobFitter.swift */; };
+		AA000047 /* LensDistortionProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000047 /* LensDistortionProbeService.swift */; };
 		AA000050 /* SessionPackagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000050 /* SessionPackagingService.swift */; };
 		AA000051 /* JSONLWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000051 /* JSONLWriter.swift */; };
 		AA000052 /* ProcessingScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000052 /* ProcessingScheduler.swift */; };
@@ -53,8 +54,9 @@
 		AA000084 /* S3UploadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000084 /* S3UploadService.swift */; };
 		AA000085 /* UploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000085 /* UploadManager.swift */; };
 		AA000086 /* EmbeddedAWSCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000086 /* EmbeddedAWSCredentials.swift */; };
-		AA000089 /* CampaignConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000089 /* CampaignConfig.swift */; };
+		AA000100 /* EmbeddedAWSSecrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000100 /* EmbeddedAWSSecrets.swift */; };
 		AA000087 /* SessionUploadNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000087 /* SessionUploadNotification.swift */; };
+		AA000089 /* CampaignConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000089 /* CampaignConfig.swift */; };
 		AA000090 /* EGOTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000090 /* EGOTheme.swift */; };
 		AA000091 /* KGenEyeHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000091 /* KGenEyeHomeView.swift */; };
 		AA000092 /* Orbitron.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AB000092 /* Orbitron.ttf */; };
@@ -69,6 +71,7 @@
 		05EF77652F90772500F39AF2 /* MonotonicClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonotonicClock.swift; sourceTree = "<group>"; };
 		05EF77672F90775700F39AF2 /* RecordingOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingOrchestrator.swift; sourceTree = "<group>"; };
 		24A51F00188F4FF26F8F610A /* Pods-EgoCapture.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EgoCapture.debug.xcconfig"; path = "Target Support Files/Pods-EgoCapture/Pods-EgoCapture.debug.xcconfig"; sourceTree = "<group>"; };
+		29E02DA0D79A712E8205D5D7 /* Pods_EgoCapture.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_EgoCapture.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB000001 /* EgoCaptureApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EgoCaptureApp.swift; sourceTree = "<group>"; };
 		AB000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AB000003 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
@@ -90,14 +93,14 @@
 		AB000031 /* IMUCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMUCaptureService.swift; sourceTree = "<group>"; };
 		AB000033 /* CameraCalibrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCalibrationService.swift; sourceTree = "<group>"; };
 		AB000034 /* MountCalibrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MountCalibrationService.swift; sourceTree = "<group>"; };
-		AB000044 /* FOVEnumerationDiagnostic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FOVEnumerationDiagnostic.swift; sourceTree = "<group>"; };
-		AB000045 /* LensDistortionCalibration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensDistortionCalibration.swift; sourceTree = "<group>"; };
-		AB000046 /* PlumbBobFitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumbBobFitter.swift; sourceTree = "<group>"; };
-		AB000047 /* LensDistortionProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensDistortionProbeService.swift; sourceTree = "<group>"; };
 		AB000040 /* HandLandmarkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandLandmarkService.swift; sourceTree = "<group>"; };
 		AB000041 /* HandPoseDerivationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandPoseDerivationService.swift; sourceTree = "<group>"; };
 		AB000042 /* FacePresenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacePresenceService.swift; sourceTree = "<group>"; };
 		AB000043 /* FrameQCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameQCService.swift; sourceTree = "<group>"; };
+		AB000044 /* FOVEnumerationDiagnostic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FOVEnumerationDiagnostic.swift; sourceTree = "<group>"; };
+		AB000045 /* LensDistortionCalibration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensDistortionCalibration.swift; sourceTree = "<group>"; };
+		AB000046 /* PlumbBobFitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumbBobFitter.swift; sourceTree = "<group>"; };
+		AB000047 /* LensDistortionProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensDistortionProbeService.swift; sourceTree = "<group>"; };
 		AB000050 /* SessionPackagingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionPackagingService.swift; sourceTree = "<group>"; };
 		AB000051 /* JSONLWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLWriter.swift; sourceTree = "<group>"; };
 		AB000052 /* ProcessingScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingScheduler.swift; sourceTree = "<group>"; };
@@ -110,12 +113,13 @@
 		AB000084 /* S3UploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3UploadService.swift; sourceTree = "<group>"; };
 		AB000085 /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
 		AB000086 /* EmbeddedAWSCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedAWSCredentials.swift; sourceTree = "<group>"; };
-		AB000089 /* CampaignConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignConfig.swift; sourceTree = "<group>"; };
+		AB000100 /* EmbeddedAWSSecrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedAWSSecrets.swift; sourceTree = "<group>"; };
 		AB000087 /* SessionUploadNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUploadNotification.swift; sourceTree = "<group>"; };
 		AB000088 /* S3Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3Config.swift; sourceTree = "<group>"; };
+		AB000089 /* CampaignConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignConfig.swift; sourceTree = "<group>"; };
 		AB000090 /* EGOTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EGOTheme.swift; sourceTree = "<group>"; };
 		AB000091 /* KGenEyeHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KGenEyeHomeView.swift; sourceTree = "<group>"; };
-		AB000092 /* Orbitron.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Orbitron.ttf"; sourceTree = "<group>"; };
+		AB000092 /* Orbitron.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/Orbitron.ttf; sourceTree = "<group>"; };
 		AC000001 /* EgoCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EgoCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA100002 /* hand_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = hand_landmarker.task; sourceTree = "<group>"; };
 		EFFC6E6639E6CD6374415719 /* Pods-EgoCapture.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EgoCapture.release.xcconfig"; path = "Target Support Files/Pods-EgoCapture/Pods-EgoCapture.release.xcconfig"; sourceTree = "<group>"; };
@@ -126,6 +130,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D7247BAC2C9BF14F2636C21 /* Pods_EgoCapture.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -200,14 +205,6 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
-		AE000011 /* Diagnostics */ = {
-			isa = PBXGroup;
-			children = (
-				AB000044 /* FOVEnumerationDiagnostic.swift */,
-			);
-			path = Diagnostics;
-			sourceTree = "<group>";
-		};
 		AE000005 /* Capture */ = {
 			isa = PBXGroup;
 			children = (
@@ -278,10 +275,19 @@
 				AB000084 /* S3UploadService.swift */,
 				AB000085 /* UploadManager.swift */,
 				AB000086 /* EmbeddedAWSCredentials.swift */,
+				AB000100 /* EmbeddedAWSSecrets.swift */,
 				AB000089 /* CampaignConfig.swift */,
 				AB000087 /* SessionUploadNotification.swift */,
 			);
 			path = Upload;
+			sourceTree = "<group>";
+		};
+		AE000011 /* Diagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				AB000044 /* FOVEnumerationDiagnostic.swift */,
+			);
+			path = Diagnostics;
 			sourceTree = "<group>";
 		};
 		AE000099 /* Products */ = {
@@ -295,6 +301,7 @@
 		AFBD4B5B41D60A4323F9A926 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				29E02DA0D79A712E8205D5D7 /* Pods_EgoCapture.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -452,6 +459,7 @@
 				AA000084 /* S3UploadService.swift in Sources */,
 				AA000085 /* UploadManager.swift in Sources */,
 				AA000086 /* EmbeddedAWSCredentials.swift in Sources */,
+				AA000100 /* EmbeddedAWSSecrets.swift in Sources */,
 				AA000089 /* CampaignConfig.swift in Sources */,
 				AA000087 /* SessionUploadNotification.swift in Sources */,
 				AA000010 /* IMUSample.swift in Sources */,
@@ -601,7 +609,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = EgoCapture/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -629,7 +637,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = EgoCapture/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";

@@ -21,3 +21,8 @@ serverless/.venv/
 serverless/.aws-sam/
 serverless/package.zip
 serverless/*.zip
+
+# AWS credentials embedded in the app (never commit — GitHub secret scanning
+# blocks pushes and AWS auto-disables leaked keys). Use the `.example` file
+# as a template.
+EgoCapture/Services/Upload/EmbeddedAWSSecrets.swift
