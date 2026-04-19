@@ -1,277 +1,410 @@
-"""Builds a single-session MCAP file from the JSON/JSONL artifacts produced by the iOS capture app.
+"""Builds a single-session, Humyn Labs / Figure-compliant MCAP from the
+JSON/JSONL + MP4 artifacts produced by the iOS capture app.
 
-Design goals:
-- **Deterministic.** Re-running on the same inputs produces byte-identical output (modulo MCAP
-  library version), so this Lambda is idempotent.
-- **Partial-tolerant.** Missing artifacts are logged and skipped — the MCAP still gets written.
-- **Wall-clock timestamps.** Every message uses epoch nanoseconds so cross-session inspection
-  works in Foxglove.
-- **No compression** (per user request — MCAP chunk compression disabled).
+Output channels (all ``json`` + ``jsonschema`` encoding, zstd-compressed
+chunks):
+
+* ``/camera/head/video``        -> ``foxglove.CompressedVideo``    (30 Hz, H.264)
+* ``/camera/head/calibration``  -> ``foxglove.CameraCalibration``  (1x)
+* ``/sensors/head/imu``         -> ``foxglove.Imu``                (100-250 Hz)
+* ``/tf``                       -> ``foxglove.FrameTransform``     (1x, static)
+* ``/session/metadata``         -> ``humynlabs.SessionMetadata``   (1x, head)
+* ``/session/metrics``          -> ``humynlabs.SessionMetrics``    (1x, tail)
+
+Design rules:
+
+* Deterministic: the same inputs produce a byte-equivalent MCAP (modulo the
+  MCAP library version and the zstd patch level). The Lambda is idempotent.
+* Partial-tolerant: a missing artifact is logged and skipped; the MCAP is
+  still written with whatever channels are usable.
+* Single clock domain in the output: every message timestamp is an epoch
+  ``{sec, nsec}`` pair. Mach-absolute times stay inside the iOS app.
+* Video is *embedded* (Annex B H.264 per-frame, base64) — no MP4 sidecar.
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Iterator, Optional
 
-from mcap.writer import Writer, CompressionType
+from mcap.writer import CompressionType, Writer
+
+import transforms
+from video_extractor import H264Frame, extract_h264_frames
 
 log = logging.getLogger(__name__)
 
-# ----------------------------------------------------------------------------
-# Channel registry — maps input file to channel name, schema file, encoding.
-# ----------------------------------------------------------------------------
-
-JSON_SCHEMA_ENCODING = "jsonschema"
-JSON_MESSAGE_ENCODING = "json"
+SCHEMA_ENCODING = "jsonschema"
+MESSAGE_ENCODING = "json"
 
 SCHEMAS_DIR = Path(__file__).resolve().parent / "schemas"
+
+# Topics must match Foxglove and ROS conventions for panel auto-detection
+# (e.g. the Image panel looks for any CompressedVideo topic, but the tf
+# panel specifically expects ``/tf``).
+TOPIC_VIDEO = "/camera/head/video"
+TOPIC_CALIBRATION = "/camera/head/calibration"
+TOPIC_IMU = "/sensors/head/imu"
+TOPIC_TF = "/tf"
+TOPIC_SESSION_METADATA = "/session/metadata"
+TOPIC_SESSION_METRICS = "/session/metrics"
 
 
 @dataclass(frozen=True)
 class ChannelSpec:
-    """A single MCAP channel wired to one of the session's JSON artifacts."""
     topic: str
     schema_file: str
     schema_name: str
-    # True if the source file is JSONL (one message per line); False if single-object JSON.
-    is_jsonl: bool
-    # "base" name (without _{code}) matching the on-disk file in the session dir.
-    source_base: str
-    source_ext: str
 
 
 CHANNELS: list[ChannelSpec] = [
-    ChannelSpec(
-        topic="/sensors/imu",
-        schema_file="imu_sample.schema.json",
-        schema_name="IMUSample",
-        is_jsonl=True,
-        source_base="imu",
-        source_ext="jsonl",
-    ),
-    ChannelSpec(
-        topic="/camera/frame_meta",
-        schema_file="video_frame_meta.schema.json",
-        schema_name="VideoFrameMeta",
-        is_jsonl=True,
-        source_base="video_timestamps",
-        source_ext="jsonl",
-    ),
-    ChannelSpec(
-        topic="/session/metadata",
-        schema_file="session_metadata.schema.json",
-        schema_name="SessionMetadata",
-        is_jsonl=False,
-        source_base="metadata",
-        source_ext="json",
-    ),
-    ChannelSpec(
-        topic="/session/validation",
-        schema_file="technical_validation.schema.json",
-        schema_name="TechnicalValidation",
-        is_jsonl=False,
-        source_base="technical_validation",
-        source_ext="json",
-    ),
-    ChannelSpec(
-        topic="/camera/formats",
-        schema_file="camera_formats.schema.json",
-        schema_name="CameraFormats",
-        is_jsonl=False,
-        source_base="camera_format_diagnostics",
-        source_ext="json",
-    ),
-    ChannelSpec(
-        topic="/session/manifest",
-        schema_file="session_manifest.schema.json",
-        schema_name="SessionManifest",
-        is_jsonl=False,
-        source_base="session_manifest",
-        source_ext="json",
-    ),
+    ChannelSpec(TOPIC_VIDEO,            "foxglove.CompressedVideo.schema.json",   "foxglove.CompressedVideo"),
+    ChannelSpec(TOPIC_CALIBRATION,      "foxglove.CameraCalibration.schema.json", "foxglove.CameraCalibration"),
+    ChannelSpec(TOPIC_IMU,              "foxglove.Imu.schema.json",               "foxglove.Imu"),
+    ChannelSpec(TOPIC_TF,               "foxglove.FrameTransform.schema.json",    "foxglove.FrameTransform"),
+    ChannelSpec(TOPIC_SESSION_METADATA, "humynlabs.SessionMetadata.schema.json",  "humynlabs.SessionMetadata"),
+    ChannelSpec(TOPIC_SESSION_METRICS,  "humynlabs.SessionMetrics.schema.json",   "humynlabs.SessionMetrics"),
 ]
 
 
-# ----------------------------------------------------------------------------
-# File resolution — new format ({base}_{code}.{ext}) with legacy fallback.
-# ----------------------------------------------------------------------------
-
-def resolve_artifact(session_dir: Path, session_code: str, base: str, ext: str) -> Optional[Path]:
-    """Return the path for an artifact, preferring suffixed filenames."""
-    candidates = [
-        session_dir / f"{base}_{session_code}.{ext}",
-        session_dir / f"{base}.{ext}",
-    ]
-    for c in candidates:
-        if c.exists():
-            return c
-    return None
-
-
-# ----------------------------------------------------------------------------
-# Timestamp helpers
-# ----------------------------------------------------------------------------
-
-def epoch_ms_to_ns(epoch_ms: float | int) -> int:
-    """Convert float ms → int ns, safe for the full double range we care about."""
-    return int(round(float(epoch_ms) * 1_000_000))
-
-
-def pick_epoch_ms(obj: dict[str, Any], fallback_ns: Optional[int]) -> int:
-    """Best-effort extraction of a message timestamp (ns since epoch).
-
-    Order:
-      1. timestampEpochMs (IMU / video frame meta).
-      2. createdAtEpochMs (manifest).
-      3. startTimeEpochMs (session metadata).
-      4. fallback_ns provided by the caller.
-    """
-    for key in ("timestampEpochMs", "createdAtEpochMs", "startTimeEpochMs"):
-        val = obj.get(key)
-        if isinstance(val, (int, float)) and val > 0:
-            return epoch_ms_to_ns(val)
-    if fallback_ns is not None:
-        return fallback_ns
-    raise ValueError("no timestamp available and no fallback provided")
-
-
-# ----------------------------------------------------------------------------
-# Builder
-# ----------------------------------------------------------------------------
-
 @dataclass
 class BuildStats:
-    """Diagnostic counters returned after a build."""
     output_path: Path
     total_messages: int = 0
-    channel_counts: dict[str, int] = None  # type: ignore[assignment]
-    skipped_channels: list[str] = None     # type: ignore[assignment]
-
-    def __post_init__(self) -> None:
-        if self.channel_counts is None:
-            self.channel_counts = {}
-        if self.skipped_channels is None:
-            self.skipped_channels = []
+    channel_counts: dict[str, int] = field(default_factory=dict)
+    skipped_channels: list[str] = field(default_factory=list)
+    # Optional: helpful when validating a session that didn't include
+    # video in the upload batch (iOS "no-video" captures don't ship MP4s).
+    video_embedded: bool = False
 
 
-def build_mcap(session_dir: Path, session_code: str, output_path: Path) -> BuildStats:
-    """Build `{output_path}` from the artifacts inside `session_dir`.
+def build_mcap(
+    session_dir: Path,
+    session_code: str,
+    output_path: Path,
+    video_paths: Optional[list[Path]] = None,
+) -> BuildStats:
+    """Assemble an MCAP at ``output_path``.
 
-    Raises OSError if the output path is not writable. All other failures (a
-    missing individual artifact, a malformed line) are logged and skipped.
+    ``session_dir`` must contain the iOS artifacts (``imu_*.jsonl``,
+    ``video_timestamps_*.jsonl``, ``metadata_*.json``,
+    ``technical_validation_*.json``). ``video_paths`` is the ordered list
+    of H.264 MP4s to embed — one entry for a consolidated video, or many
+    for iOS chunked uploads (``chunk_NNN_<code>.mp4``). Pass ``None`` or
+    an empty list to skip the video channel (useful for re-running on a
+    machine that can't afford to download the MP4s).
     """
     stats = BuildStats(output_path=output_path)
 
-    # Fallback timestamp: if a single-shot JSON file has no epoch fields and
-    # the session_metadata wasn't loaded yet, this is what we anchor to.
-    session_start_ns: Optional[int] = None
+    metadata = _load_single_json(session_dir, session_code, "metadata")
+    if metadata is None:
+        log.error("metadata artifact missing — cannot build a valid MCAP")
+        raise FileNotFoundError(f"metadata_{session_code}.json not found in {session_dir}")
 
-    with open(output_path, "wb") as out_fp:
-        writer = Writer(out_fp, compression=CompressionType.NONE)
-        writer.start(profile="", library="kgen-eye-mcap-builder/1.0")
+    validation = _load_single_json(session_dir, session_code, "technical_validation") or {}
 
-        # Pre-load session metadata first so the fallback timestamp is set.
-        meta_channel = next(c for c in CHANNELS if c.source_base == "metadata")
-        meta_path = resolve_artifact(session_dir, session_code, meta_channel.source_base, meta_channel.source_ext)
-        if meta_path is not None:
-            try:
-                meta_obj = json.loads(meta_path.read_text())
-                start_ms = meta_obj.get("startTimeEpochMs")
-                if isinstance(start_ms, (int, float)) and start_ms > 0:
-                    session_start_ns = epoch_ms_to_ns(start_ms)
-            except (json.JSONDecodeError, OSError) as e:
-                log.warning("could not pre-read metadata for fallback ts: %s", e)
+    session_start_ns = transforms.epoch_ms_to_ns(metadata.get("startTimeEpochMs") or 0)
+    if session_start_ns <= 0:
+        raise ValueError("session metadata missing startTimeEpochMs")
 
-        # Register schemas & channels up-front so topic order in Foxglove is stable.
-        registered: dict[str, tuple[int, int]] = {}   # topic -> (schema_id, channel_id)
-        for spec in CHANNELS:
-            schema_path = SCHEMAS_DIR / spec.schema_file
-            if not schema_path.exists():
-                log.error("schema file missing: %s", schema_path)
-                stats.skipped_channels.append(spec.topic)
-                continue
-            schema_id = writer.register_schema(
-                name=spec.schema_name,
-                encoding=JSON_SCHEMA_ENCODING,
-                data=schema_path.read_bytes(),
-            )
-            channel_id = writer.register_channel(
-                topic=spec.topic,
-                message_encoding=JSON_MESSAGE_ENCODING,
-                schema_id=schema_id,
-            )
-            registered[spec.topic] = (schema_id, channel_id)
+    with output_path.open("wb") as fp:
+        writer = Writer(fp, compression=CompressionType.ZSTD)
+        writer.start(profile="", library="humynlabs-mcap-builder/1.0")
 
-        # Emit messages per channel.
-        for spec in CHANNELS:
-            if spec.topic not in registered:
-                continue
-            _, channel_id = registered[spec.topic]
+        channel_ids = _register_channels(writer, stats)
 
-            path = resolve_artifact(session_dir, session_code, spec.source_base, spec.source_ext)
-            if path is None:
-                log.info("[%s] artifact missing: %s_%s.%s", spec.topic, spec.source_base, session_code, spec.source_ext)
-                stats.skipped_channels.append(spec.topic)
-                continue
+        _emit_session_metadata(writer, channel_ids, stats, metadata, session_code)
+        _emit_calibration(writer, channel_ids, stats, metadata, session_start_ns)
+        _emit_frame_transform(writer, channel_ids, stats, metadata, session_start_ns)
 
-            count = 0
-            try:
-                for msg_ns, payload in _iter_messages(spec, path, session_start_ns):
-                    writer.add_message(
-                        channel_id=channel_id,
-                        log_time=msg_ns,
-                        publish_time=msg_ns,
-                        data=payload,
-                    )
-                    count += 1
-            except (OSError, ValueError) as e:
-                log.exception("[%s] failed to emit messages: %s", spec.topic, e)
+        _emit_imu(writer, channel_ids, stats, session_dir, session_code)
 
-            stats.channel_counts[spec.topic] = count
-            stats.total_messages += count
-            log.info("[%s] emitted %d message(s)", spec.topic, count)
+        usable_videos = [p for p in (video_paths or []) if p.exists()]
+        if usable_videos:
+            _emit_video(writer, channel_ids, stats, session_dir, session_code, usable_videos)
+            stats.video_embedded = stats.channel_counts.get(TOPIC_VIDEO, 0) > 0
+        else:
+            stats.skipped_channels.append(TOPIC_VIDEO)
+            log.info("[%s] no MP4 supplied; skipping video embedding", TOPIC_VIDEO)
+
+        _emit_session_metrics(
+            writer, channel_ids, stats, validation, metadata, session_code, session_start_ns
+        )
 
         writer.finish()
 
     return stats
 
 
-def _iter_messages(
-    spec: ChannelSpec,
-    path: Path,
-    fallback_ns: Optional[int],
-) -> Iterable[tuple[int, bytes]]:
-    """Yield (timestamp_ns, serialized_bytes) for each message in `path`."""
-    if spec.is_jsonl:
-        with path.open("r", encoding="utf-8") as fp:
-            for line_no, line in enumerate(fp, start=1):
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    obj = json.loads(line)
-                except json.JSONDecodeError as e:
-                    log.warning("[%s] skipping malformed line %d: %s", spec.topic, line_no, e)
-                    continue
-                try:
-                    ts_ns = pick_epoch_ms(obj, fallback_ns)
-                except ValueError:
-                    log.warning("[%s] skipping line %d: no timestamp", spec.topic, line_no)
-                    continue
-                yield ts_ns, line.encode("utf-8")
+# ----------------------------------------------------------------------------
+# Channel / schema registration
+# ----------------------------------------------------------------------------
+
+def _register_channels(writer: Writer, stats: BuildStats) -> dict[str, int]:
+    """Register every schema + channel up-front so topic order is stable."""
+    ids: dict[str, int] = {}
+    for spec in CHANNELS:
+        schema_path = SCHEMAS_DIR / spec.schema_file
+        if not schema_path.exists():
+            log.error("schema file missing on disk: %s", schema_path)
+            stats.skipped_channels.append(spec.topic)
+            continue
+        schema_id = writer.register_schema(
+            name=spec.schema_name,
+            encoding=SCHEMA_ENCODING,
+            data=schema_path.read_bytes(),
+        )
+        channel_id = writer.register_channel(
+            topic=spec.topic,
+            message_encoding=MESSAGE_ENCODING,
+            schema_id=schema_id,
+        )
+        ids[spec.topic] = channel_id
+    return ids
+
+
+# ----------------------------------------------------------------------------
+# Per-channel emitters
+# ----------------------------------------------------------------------------
+
+def _emit_session_metadata(
+    writer: Writer,
+    channel_ids: dict[str, int],
+    stats: BuildStats,
+    metadata: dict[str, Any],
+    session_code: str,
+) -> None:
+    chan = channel_ids.get(TOPIC_SESSION_METADATA)
+    if chan is None:
+        return
+    msg = transforms.session_metadata(metadata, session_code)
+    log_ns = msg["recorded_at_epoch_ns"] or 0
+    _write(writer, chan, log_ns, msg)
+    stats.channel_counts[TOPIC_SESSION_METADATA] = 1
+    stats.total_messages += 1
+
+
+def _emit_calibration(
+    writer: Writer,
+    channel_ids: dict[str, int],
+    stats: BuildStats,
+    metadata: dict[str, Any],
+    session_start_ns: int,
+) -> None:
+    chan = channel_ids.get(TOPIC_CALIBRATION)
+    if chan is None:
+        return
+    msg = transforms.camera_calibration(metadata, session_start_ns)
+    if msg is None:
+        stats.skipped_channels.append(TOPIC_CALIBRATION)
+        log.info("[%s] no usable intrinsics in metadata — channel skipped", TOPIC_CALIBRATION)
+        return
+    _write(writer, chan, session_start_ns, msg)
+    stats.channel_counts[TOPIC_CALIBRATION] = 1
+    stats.total_messages += 1
+
+
+def _emit_frame_transform(
+    writer: Writer,
+    channel_ids: dict[str, int],
+    stats: BuildStats,
+    metadata: dict[str, Any],
+    session_start_ns: int,
+) -> None:
+    chan = channel_ids.get(TOPIC_TF)
+    if chan is None:
+        return
+    msg = transforms.frame_transform(metadata, session_start_ns)
+    if msg is None:
+        stats.skipped_channels.append(TOPIC_TF)
+        return
+    _write(writer, chan, session_start_ns, msg)
+    stats.channel_counts[TOPIC_TF] = 1
+    stats.total_messages += 1
+
+
+def _emit_imu(
+    writer: Writer,
+    channel_ids: dict[str, int],
+    stats: BuildStats,
+    session_dir: Path,
+    session_code: str,
+) -> None:
+    chan = channel_ids.get(TOPIC_IMU)
+    if chan is None:
+        return
+    imu_path = _resolve(session_dir, session_code, "imu", "jsonl")
+    if imu_path is None:
+        stats.skipped_channels.append(TOPIC_IMU)
+        log.info("[%s] artifact missing", TOPIC_IMU)
         return
 
-    obj = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(obj, dict):
-        log.warning("[%s] expected JSON object, got %s", spec.topic, type(obj).__name__)
+    count = 0
+    with imu_path.open("r", encoding="utf-8") as fp:
+        for obj in transforms.iter_jsonl_objects(fp):
+            try:
+                log_ns, msg = transforms.imu_sample(obj)
+            except ValueError as e:
+                log.warning("[%s] skipping sample: %s", TOPIC_IMU, e)
+                continue
+            _write(writer, chan, log_ns, msg)
+            count += 1
+    stats.channel_counts[TOPIC_IMU] = count
+    stats.total_messages += count
+    log.info("[%s] emitted %d samples", TOPIC_IMU, count)
+
+
+def _emit_video(
+    writer: Writer,
+    channel_ids: dict[str, int],
+    stats: BuildStats,
+    session_dir: Path,
+    session_code: str,
+    video_paths: list[Path],
+) -> None:
+    chan = channel_ids.get(TOPIC_VIDEO)
+    if chan is None:
         return
+
+    timestamps = _load_frame_timestamps(session_dir, session_code)
+    if not timestamps:
+        stats.skipped_channels.append(TOPIC_VIDEO)
+        log.warning(
+            "[%s] video_timestamps artifact missing or empty — skipping video", TOPIC_VIDEO
+        )
+        return
+
+    # Pair H.264 frames with iOS-captured timestamps by index. iOS guarantees
+    # one entry in video_timestamps per encoded frame, in presentation order
+    # across all chunks. We iterate chunks in order and consume one timestamp
+    # per MP4 sample; mismatches are logged but don't abort — a slightly
+    # truncated video channel is better than no video at all.
+    count = 0
+    ts_iter = iter(timestamps)
+    for video_path in video_paths:
+        try:
+            frames = list(extract_h264_frames(video_path))
+        except ValueError as e:
+            log.error("[%s] cannot parse MP4 %s: %s", TOPIC_VIDEO, video_path.name, e)
+            continue
+
+        for frame in frames:
+            try:
+                ts_ms = next(ts_iter)
+            except StopIteration:
+                log.warning(
+                    "[%s] ran out of timestamps at frame %d — stopping video emission",
+                    TOPIC_VIDEO, count,
+                )
+                break
+
+            log_ns = transforms.epoch_ms_to_ns(ts_ms)
+            msg = {
+                "timestamp": transforms.epoch_ns_to_sec_nsec(log_ns),
+                "frame_id": transforms.FRAME_ID_HEAD_CAMERA,
+                "data": base64.b64encode(frame.data).decode("ascii"),
+                "format": "h264",
+            }
+            _write(writer, chan, log_ns, msg)
+            count += 1
+        else:
+            # Python: the else branch of a for runs when the loop completed
+            # without a break. Continue to the next chunk in that case.
+            continue
+        # A break above propagated here: stop consuming further chunks.
+        break
+
+    remaining = sum(1 for _ in ts_iter)
+    if remaining:
+        log.warning(
+            "[%s] %d timestamp(s) had no matching MP4 frame", TOPIC_VIDEO, remaining,
+        )
+
+    if count == 0:
+        stats.skipped_channels.append(TOPIC_VIDEO)
+        log.error("[%s] decoded 0 frames across %d MP4(s)", TOPIC_VIDEO, len(video_paths))
+        return
+
+    stats.channel_counts[TOPIC_VIDEO] = count
+    stats.total_messages += count
+    log.info("[%s] embedded %d frames from %d MP4(s)", TOPIC_VIDEO, count, len(video_paths))
+
+
+def _emit_session_metrics(
+    writer: Writer,
+    channel_ids: dict[str, int],
+    stats: BuildStats,
+    validation: dict[str, Any],
+    metadata: dict[str, Any],
+    session_code: str,
+    session_start_ns: int,
+) -> None:
+    chan = channel_ids.get(TOPIC_SESSION_METRICS)
+    if chan is None:
+        return
+    # Emit metrics at the end of the session timeline so Foxglove shows them
+    # chronologically after all the video/IMU samples.
+    duration_ns = 0
+    duration_sec = metadata.get("durationSec")
+    if isinstance(duration_sec, (int, float)) and duration_sec > 0:
+        duration_ns = int(round(duration_sec * 1_000_000_000))
+    computed_at_ns = session_start_ns + duration_ns
+    msg = transforms.session_metrics(validation, metadata, computed_at_ns, session_code)
+    _write(writer, chan, computed_at_ns, msg)
+    stats.channel_counts[TOPIC_SESSION_METRICS] = 1
+    stats.total_messages += 1
+
+
+# ----------------------------------------------------------------------------
+# Writer / artifact helpers
+# ----------------------------------------------------------------------------
+
+def _write(writer: Writer, channel_id: int, log_ns: int, body: dict[str, Any]) -> None:
+    writer.add_message(
+        channel_id=channel_id,
+        log_time=log_ns,
+        publish_time=log_ns,
+        data=json.dumps(body, separators=(",", ":")).encode("utf-8"),
+    )
+
+
+def _resolve(session_dir: Path, session_code: str, base: str, ext: str) -> Optional[Path]:
+    """Return the first matching artifact path, suffixed or legacy."""
+    for candidate in (
+        session_dir / f"{base}_{session_code}.{ext}",
+        session_dir / f"{base}.{ext}",
+    ):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _load_single_json(
+    session_dir: Path, session_code: str, base: str
+) -> Optional[dict[str, Any]]:
+    path = _resolve(session_dir, session_code, base, "json")
+    if path is None:
+        return None
     try:
-        ts_ns = pick_epoch_ms(obj, fallback_ns)
-    except ValueError:
-        log.warning("[%s] no timestamp field; anchoring at ns=0", spec.topic)
-        ts_ns = 0
-    yield ts_ns, path.read_bytes()
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        log.error("could not read %s: %s", path, e)
+        return None
+
+
+def _load_frame_timestamps(session_dir: Path, session_code: str) -> list[float]:
+    """Return the list of frame timestamps (epoch ms) in capture order."""
+    path = _resolve(session_dir, session_code, "video_timestamps", "jsonl")
+    if path is None:
+        return []
+    out: list[float] = []
+    with path.open("r", encoding="utf-8") as fp:
+        for obj in transforms.iter_jsonl_objects(fp):
+            ts = obj.get("timestampEpochMs")
+            if isinstance(ts, (int, float)) and ts > 0:
+                out.append(float(ts))
+    return out

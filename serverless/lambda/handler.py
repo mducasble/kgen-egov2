@@ -1,16 +1,24 @@
-"""AWS Lambda entry point for the KGeN Eye MCAP builder.
+"""AWS Lambda entry point for the Humyn Labs MCAP builder.
 
-Trigger: S3 ObjectCreated event filtered to `upload_complete_*.json` (the sentinel file).
+Trigger: S3 ObjectCreated event filtered to ``upload_complete_*.json``
+(the iOS sentinel upload).
 
 Flow:
-  1. Parse S3 event → extract bucket + key for each record.
-  2. Validate the key ends with the sentinel pattern and lives under `<collectorId>/<sessionCode>/`.
-  3. Download the whole session prefix into `/tmp/<sessionCode>/`.
-  4. Build `<sessionCode>.mcap` using `mcap_builder.build_mcap`.
-  5. Upload it back to `s3://<bucket>/<collectorId>/<sessionCode>/<sessionCode>.mcap`.
-  6. Return a per-record result list (for CloudWatch/Lambda Insights).
+  1. Parse the S3 event and extract the bucket + key for each record.
+  2. Validate the key ends with the sentinel pattern and lives under
+     ``<prefix>/<sessionCode>/``.
+  3. Download the session's JSON artifacts **and** every
+     ``chunk_<NNN>_<code>.mp4`` video chunk (or a consolidated
+     ``video_<code>.mp4`` when present) into ``/tmp/<sessionCode>/``.
+  4. Build ``<sessionCode>.mcap`` with :func:`mcap_builder.build_mcap`.
+     The builder extracts H.264 NAL units from each chunk in order and
+     embeds them as ``foxglove.CompressedVideo`` messages — no sidecar
+     MP4 in the output.
+  5. Upload the MCAP to
+     ``s3://<bucket>/<prefix>/<sessionCode>/<sessionCode>.mcap``.
 
-Layout assumption (Option A): JSONs remain in-place; the `.mcap` is written alongside them.
+Deliberately side-by-side: JSONs and chunks stay in place so humans can
+still inspect them out-of-band. The .mcap is additive.
 """
 
 from __future__ import annotations
@@ -29,7 +37,7 @@ import boto3
 from mcap_builder import build_mcap
 
 log = logging.getLogger()
-log.setLevel(logging.INFO)
+log.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 s3 = boto3.client("s3")
 
@@ -38,16 +46,25 @@ SENTINEL_RE = re.compile(
     r"^(?P<prefix>.+?)/(?P<code>[A-Za-z0-9_-]{8,32})/upload_complete_(?P=code)\.json$"
 )
 
-# Artifacts we actually need to build the MCAP. Anything else (video_*.mp4,
-# chunk_*, upload_state_*) is intentionally skipped to keep /tmp small.
-DOWNLOAD_BASES = (
+# Artifacts required to build the new (Humyn Labs) MCAP. We still skip
+# incidental files (upload_state_*, etc.) to keep /tmp usage predictable.
+JSON_BASES = (
     "imu",
     "video_timestamps",
     "metadata",
     "technical_validation",
-    "camera_format_diagnostics",
-    "session_manifest",
 )
+
+
+def _consolidated_video_name(code: str) -> str:
+    """Name the iOS app uses when it uploads the un-chunked MP4 directly."""
+    return f"video_{code}.mp4"
+
+
+# Matches ``chunk_<NNN>_<sessionCode>.mp4`` — the default chunked upload
+# (see ``VideoChunkingService.swift``).
+def _chunk_re(session_code: str) -> "re.Pattern[str]":
+    return re.compile(rf"^chunk_(\d+)_{re.escape(session_code)}\.mp4$")
 
 
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -76,11 +93,14 @@ def _process_record(record: dict[str, Any]) -> dict[str, Any]:
         log.info("ignoring non-sentinel key: %s", key)
         return {"ok": True, "skipped": True, "reason": "not a sentinel", "key": key}
 
-    prefix = match.group("prefix")            # e.g. "collectorA"  (may contain sub-prefixes)
-    session_code = match.group("code")         # e.g. "qB7nX3_mL9Vz"
+    prefix = match.group("prefix")
+    session_code = match.group("code")
     session_prefix = f"{prefix}/{session_code}/"
 
-    log.info("building MCAP for bucket=%s prefix=%s code=%s", bucket, session_prefix, session_code)
+    log.info(
+        "building MCAP for bucket=%s prefix=%s code=%s",
+        bucket, session_prefix, session_code,
+    )
 
     work_dir = Path("/tmp") / session_code
     if work_dir.exists():
@@ -88,7 +108,7 @@ def _process_record(record: dict[str, Any]) -> dict[str, Any]:
     work_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        _download_session_artifacts(bucket, session_prefix, session_code, work_dir)
+        video_paths = _download_session_artifacts(bucket, session_prefix, session_code, work_dir)
 
         out_name = f"{session_code}.mcap"
         out_path = work_dir / out_name
@@ -96,6 +116,7 @@ def _process_record(record: dict[str, Any]) -> dict[str, Any]:
             session_dir=work_dir,
             session_code=session_code,
             output_path=out_path,
+            video_paths=video_paths,
         )
 
         if stats.total_messages == 0:
@@ -109,8 +130,8 @@ def _process_record(record: dict[str, Any]) -> dict[str, Any]:
             ExtraArgs={"ContentType": "application/octet-stream"},
         )
         log.info(
-            "uploaded %s (messages=%d, skipped_channels=%s)",
-            mcap_key, stats.total_messages, stats.skipped_channels,
+            "uploaded %s (messages=%d, skipped_channels=%s, video_embedded=%s)",
+            mcap_key, stats.total_messages, stats.skipped_channels, stats.video_embedded,
         )
 
         return {
@@ -121,6 +142,7 @@ def _process_record(record: dict[str, Any]) -> dict[str, Any]:
             "messages": stats.total_messages,
             "channels": stats.channel_counts,
             "skippedChannels": stats.skipped_channels,
+            "videoEmbedded": stats.video_embedded,
         }
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -131,33 +153,78 @@ def _download_session_artifacts(
     session_prefix: str,
     session_code: str,
     dest: Path,
-) -> None:
-    """Download only the JSON/JSONL artifacts we need to build the MCAP.
+) -> list[Path]:
+    """Download JSON artifacts + every video MP4 chunk into ``dest``.
 
-    We do NOT download video.mp4 or chunk_*.mp4 — they would blow past /tmp limits
-    and are not part of the MCAP output anyway.
+    Returns an ordered list of MP4 paths (by chunk index) ready to be fed
+    to the builder. Each chunk is a standalone, valid MP4 produced by
+    iOS's ``AVAssetExportPresetPassthrough``, so they **cannot** be
+    concatenated as raw bytes — the builder handles them as a sequence of
+    independent containers instead.
+
+    If a legacy consolidated ``video_<code>.mp4`` exists it is returned as
+    a single-element list (older sessions, or the local dev path).
     """
     paginator = s3.get_paginator("list_objects_v2")
-    needed_suffixes = tuple(
-        f"{base}_{session_code}.{ext}"
-        for base in DOWNLOAD_BASES
-        for ext in ("json", "jsonl")
-    ) + tuple(f"{base}.{ext}" for base in DOWNLOAD_BASES for ext in ("json", "jsonl"))
 
-    downloaded = 0
+    json_suffixes = tuple(
+        f"{base}_{session_code}.{ext}"
+        for base in JSON_BASES
+        for ext in ("json", "jsonl")
+    ) + tuple(
+        f"{base}.{ext}" for base in JSON_BASES for ext in ("json", "jsonl")
+    )
+
+    consolidated = _consolidated_video_name(session_code)
+    chunk_re = _chunk_re(session_code)
+
+    json_count = 0
+    chunks: list[tuple[int, Path]] = []
+    consolidated_path: Path | None = None
+
     for page in paginator.paginate(Bucket=bucket, Prefix=session_prefix):
         for obj in page.get("Contents", []):
             key = obj["Key"]
             filename = key.rsplit("/", 1)[-1]
-            if not filename.endswith(needed_suffixes):
-                continue
             local = dest / filename
-            s3.download_file(Bucket=bucket, Key=key, Filename=str(local))
-            downloaded += 1
-            log.debug("downloaded %s (%d bytes)", filename, obj.get("Size", 0))
 
-    if downloaded == 0:
+            if filename == consolidated:
+                s3.download_file(Bucket=bucket, Key=key, Filename=str(local))
+                consolidated_path = local
+                log.info(
+                    "downloaded consolidated video %s (%d bytes)",
+                    filename, obj.get("Size", 0),
+                )
+                continue
+
+            m = chunk_re.match(filename)
+            if m is not None:
+                seq = int(m.group(1))
+                s3.download_file(Bucket=bucket, Key=key, Filename=str(local))
+                chunks.append((seq, local))
+                log.debug("downloaded chunk #%d %s (%d bytes)",
+                          seq, filename, obj.get("Size", 0))
+                continue
+
+            if filename.endswith(json_suffixes):
+                s3.download_file(Bucket=bucket, Key=key, Filename=str(local))
+                json_count += 1
+                log.debug("downloaded %s (%d bytes)", filename, obj.get("Size", 0))
+
+    if json_count == 0:
         raise FileNotFoundError(
-            f"no MCAP-relevant artifacts found under s3://{bucket}/{session_prefix}"
+            f"no MCAP-relevant JSON artifacts found under s3://{bucket}/{session_prefix}"
         )
-    log.info("downloaded %d artifact(s) to %s", downloaded, dest)
+    log.info("downloaded %d JSON artifact(s) to %s", json_count, dest)
+
+    if consolidated_path is not None:
+        return [consolidated_path]
+
+    if chunks:
+        chunks.sort(key=lambda t: t[0])
+        log.info("fetched %d video chunk(s)", len(chunks))
+        return [path for _, path in chunks]
+
+    log.info("no MP4 chunks found under s3://%s/%s — video channel will be skipped",
+             bucket, session_prefix)
+    return []

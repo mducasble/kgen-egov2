@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "foxglove.Imu",
+  "description": "Inertial measurement unit reading. Mirrors ROS sensor_msgs/Imu with Foxglove timestamp convention.",
+  "type": "object",
+  "required": ["timestamp", "frame_id", "linear_acceleration", "angular_velocity"],
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "required": ["sec", "nsec"],
+      "properties": {
+        "sec": { "type": "integer", "minimum": 0 },
+        "nsec": { "type": "integer", "minimum": 0, "maximum": 999999999 }
+      }
+    },
+    "frame_id": { "type": "string" },
+    "linear_acceleration": {
+      "description": "Linear acceleration in m/s^2. Gravity is included.",
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      }
+    },
+    "angular_velocity": {
+      "description": "Angular velocity in rad/s.",
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      }
+    },
+    "orientation": {
+      "description": "Optional fused orientation quaternion.",
+      "type": "object",
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" },
+        "w": { "type": "number" }
+      }
+    }
+  }
+}

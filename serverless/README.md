@@ -1,68 +1,85 @@
-# KGeN Eye — MCAP Builder (Server-side Lambda)
+# Humyn Labs MCAP Builder (Server-side Lambda)
 
-Converts the JSON/JSONL artifacts produced by the iOS capture app into a single
-**MCAP** file per session, after the session finishes uploading to S3.
+Converts the JSON/JSONL + MP4 artifacts produced by the iOS capture app
+into a single **Figure-compliant MCAP** per session, once the session has
+finished uploading to S3.
 
 - Trigger: `s3:ObjectCreated:*` on `upload_complete_{sessionCode}.json` (sentinel).
-- Runtime: Python 3.12 on arm64 (Graviton).
+- Runtime: Python 3.12 on arm64 (Graviton), 2 GB RAM, 4 GB ephemeral storage.
 - Output: `{collectorId}/{sessionCode}/{sessionCode}.mcap` in the same bucket.
-- Compression: **none** (per product decision — MCAP chunks stored raw).
-- Output layout: **side-by-side** (JSONs remain; MCAP is added alongside).
+- Compression: **zstd** chunks (required by Humyn Labs / Figure spec v1.0.0).
+- Video: **H.264 embedded** inside the MCAP (`foxglove.CompressedVideo`) — no MP4 sidecar consumed by downstream.
 
 ---
 
-## 1. Repository layout
+## 1. Output schema (v1.0.0)
+
+Six channels, all JSON bodies validated against JSON Schema Draft 7:
+
+| # | Topic                      | Schema                        | Rate       |
+|---|----------------------------|-------------------------------|------------|
+| 1 | `/camera/head/video`       | `foxglove.CompressedVideo`    | 30 Hz      |
+| 2 | `/camera/head/calibration` | `foxglove.CameraCalibration`  | 1×         |
+| 3 | `/sensors/head/imu`        | `foxglove.Imu`                | 100–250 Hz |
+| 4 | `/tf`                      | `foxglove.FrameTransform`     | 1×         |
+| 5 | `/session/metadata`        | `humynlabs.SessionMetadata`   | 1× (head)  |
+| 6 | `/session/metrics`         | `humynlabs.SessionMetrics`    | 1× (tail)  |
+
+Key conversions applied inside the Lambda:
+
+- **IMU accelerometer** → multiplied by `9.80665` (g → m/s²). Gyroscope stays
+  in rad/s. Timestamps collapse to a single `{sec, nsec}` epoch domain.
+- **Video**: each MP4 sample (or every sample across every `chunk_NNN_*.mp4`)
+  is converted from AVCC length-prefix framing to H.264 Annex B start codes,
+  SPS/PPS are prepended to every IDR, base64-encoded, and paired with the
+  iOS-captured frame timestamp.
+- **Camera calibration**: `K = [fx, 0, cx, 0, fy, cy, 0, 0, 1]` built from the
+  iOS `cameraIntrinsics`. Distortion model mapped to OpenCV names; coefficients
+  emitted as zeros when iOS reports no distortion (AVFoundation rectifies).
+- **Frame transform** (`/tf`): static extrinsic `head_center → head_camera` from
+  the iOS `cameraExtrinsics.rotationQuaternion` + `translationMeters`.
+- **Session metrics**: *measurements only* — no pass/fail verdicts. The old
+  `TechnicalValidation.passCriteria` block is intentionally dropped.
+
+Obsolete channels removed: `/camera/formats`, `/session/manifest`,
+`/session/validation`, `/camera/frame_meta`, `/sensors/imu`.
+
+---
+
+## 2. Repository layout
 
 ```
 serverless/
 ├── lambda/
 │   ├── handler.py              # S3 event entry point
-│   ├── mcap_builder.py         # pure conversion logic (no AWS deps)
-│   ├── requirements.txt        # mcap library
-│   └── schemas/                # one JSON Schema per channel
+│   ├── mcap_builder.py         # channel orchestrator + writer
+│   ├── transforms.py           # per-channel unit / schema conversions
+│   ├── video_extractor.py      # MP4 (AVCC) → H.264 Annex B (pure Python)
+│   ├── requirements.txt        # mcap, zstandard
+│   └── schemas/                # 6 JSON schemas (Foxglove + Humyn Labs)
 ├── scripts/
-│   └── attach_s3_notification.sh   # idempotent S3 notification wiring
+│   ├── attach_s3_notification.sh    # idempotent S3 notification wiring
+│   └── regenerate_mcaps.sh          # re-emit MCAPs for pre-existing sessions
 ├── template.yaml               # SAM template (Lambda, DLQ, alarm)
-├── samconfig.toml              # default deploy params (us-east-1, kaivideo)
+├── samconfig.toml              # default deploy params
 ├── local_test.py               # run the builder locally on a session dir
 └── README.md
 ```
 
-Session → MCAP channel mapping:
-
-| Input file                                  | MCAP topic              | Type       |
-| ------------------------------------------- | ----------------------- | ---------- |
-| `imu_{code}.jsonl`                          | `/sensors/imu`          | JSONL      |
-| `video_timestamps_{code}.jsonl`             | `/camera/frame_meta`    | JSONL      |
-| `metadata_{code}.json`                      | `/session/metadata`     | single JSON|
-| `technical_validation_{code}.json`          | `/session/validation`   | single JSON|
-| `camera_format_diagnostics_{code}.json`     | `/camera/formats`       | single JSON|
-| `session_manifest_{code}.json`              | `/session/manifest`     | single JSON|
-
-> `video_{code}.mp4` is **not** embedded in the MCAP — it stays as a separate
-> S3 object for efficient browser playback.
-
 ---
 
-## 2. Prerequisites
+## 3. Prerequisites
 
 1. Install AWS CLI v2 and authenticate as a principal that can:
-   - Create IAM roles, Lambda functions, SQS queues, CloudWatch alarms, and CloudFormation stacks.
+   - Create IAM roles, Lambda functions, SQS queues, CloudWatch alarms, CloudFormation stacks.
    - Put bucket notifications on `kaivideo`.
 2. Install [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html).
-3. Install `jq` (used by the notification wiring script).
-4. Install Docker (SAM uses it to build the Python dependency layer for Linux/arm64).
-
-```bash
-aws --version
-sam --version
-jq --version
-docker --version
-```
+3. Install `jq` (used by both scripts).
+4. Install Docker (SAM uses it to build the `zstandard` native wheel for arm64).
 
 ---
 
-## 3. First-time deploy
+## 4. First-time deploy
 
 From `serverless/`:
 
@@ -70,74 +87,90 @@ From `serverless/`:
 # 1) Build the function + deps inside a Linux container (required for native wheels).
 sam build --use-container
 
-# 2) Deploy. First run is interactive; subsequent runs honour samconfig.toml.
+# 2) Deploy.
 sam deploy --guided
-# When prompted:
-#   Stack Name                 : kgen-eye-mcap-builder
-#   AWS Region                 : us-east-1
-#   Confirm changes before deploy: Y
-#   Allow SAM CLI IAM role creation : Y
-#   Save arguments to configuration file : Y
+#   Stack Name               : kgen-eye-mcap-builder
+#   AWS Region               : us-east-1
+#   Confirm changes          : Y
+#   Allow IAM role creation  : Y
+#   Save args                : Y
 ```
 
-SAM will create:
-- Lambda function `kgen-eye-mcap-builder` (arm64, Python 3.12, 1024 MB, 300 s).
+SAM provisions:
+- Lambda `kgen-eye-mcap-builder` (arm64, Python 3.12, 2 GB RAM, 600 s timeout, 4 GB ephemeral).
 - IAM role with `S3ReadPolicy` + `S3WritePolicy` scoped to `kaivideo`.
 - SQS DLQ `kgen-eye-mcap-builder-dlq` (14-day retention).
-- CloudWatch alarm `kgen-eye-mcap-builder-dlq-not-empty`.
-- `lambda:InvokePermission` allowing S3 to call the function.
+- CloudWatch alarm on DLQ > 0.
 
-### 3.1 Wire up the S3 notification (once)
+### 4.1 Wire up the S3 notification (once)
 
 ```bash
 ./scripts/attach_s3_notification.sh
-# Variables (all optional):
-#   BUCKET=kaivideo
-#   STACK_NAME=kgen-eye-mcap-builder
-#   AWS_REGION=us-east-1
 ```
 
-The script is idempotent: it preserves any pre-existing notification
-configurations on the bucket (Queue, Topic, other Lambda targets) and only
-replaces/inserts its own entry with `Id=kgen-eye-mcap-builder-sentinel`.
+Idempotent: preserves any unrelated bucket notifications.
 
 ---
 
-## 4. Subsequent deploys
+## 5. Subsequent deploys
 
 ```bash
 sam build --use-container && sam deploy
 ```
 
-The notification script only needs to be re-run if the Lambda ARN changes
-(e.g. stack was deleted and recreated).
+---
+
+## 6. Regenerating MCAPs for existing sessions
+
+When the schema changes, every pre-existing `.mcap` must be re-emitted.
+The source artifacts (JSONs + MP4 chunks) never move, so we just re-invoke
+the Lambda for each session's sentinel key:
+
+```bash
+# Dry run first (no Lambda calls, just the list of sessions it will touch).
+./scripts/regenerate_mcaps.sh --dry-run
+
+# Full re-run (synchronous; prints per-session status).
+./scripts/regenerate_mcaps.sh
+
+# Fire-and-forget (much faster; watch CloudWatch for results).
+./scripts/regenerate_mcaps.sh --async
+
+# Narrow the blast radius while testing.
+./scripts/regenerate_mcaps.sh --prefix alice/ --limit 5
+```
+
+Each invocation overwrites the existing `.mcap` in-place.
 
 ---
 
-## 5. Local testing (no AWS needed)
+## 7. Local testing (no AWS needed)
 
 ```bash
-# One-time: set up a venv with the mcap lib.
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r lambda/requirements.txt
 
-# Run against a real session dumped from the phone/S3.
 python3 local_test.py /path/to/qB7nX3_mL9Vz qB7nX3_mL9Vz
 # → writes qB7nX3_mL9Vz.mcap into that folder and prints channel counts.
+
+# Skip the MP4 step for a fast IMU/metadata-only iteration:
+python3 local_test.py /path/to/qB7nX3_mL9Vz qB7nX3_mL9Vz --no-video
 ```
 
 Open the resulting file in [Foxglove Studio](https://foxglove.dev/) to verify:
-- IMU at ~100 Hz on `/sensors/imu`.
-- Frame metadata at ~30 Hz on `/camera/frame_meta`.
-- One-shot messages on `/session/metadata`, `/session/validation`, `/camera/formats`, `/session/manifest`.
+- Video plays on `/camera/head/video` (Image / Video panel).
+- IMU at ~100 Hz on `/sensors/head/imu`.
+- TF tree `head_center → head_camera` populated.
+- `/session/metadata` and `/session/metrics` each have one row.
 
 ---
 
-## 6. iOS sentinel (already in this repo)
+## 8. iOS sentinel (already in this repo)
 
 `EgoCapture/Services/Upload/UploadManager.swift` writes and uploads
 `upload_complete_{sessionId}.json` **as the last object** once every other
-file has successfully landed. This is what fires the Lambda.
+file (JSONs + `chunk_NNN_<code>.mp4`) has successfully landed. This is what
+fires the Lambda.
 
 Sentinel payload:
 ```json
@@ -152,13 +185,13 @@ Sentinel payload:
 
 ---
 
-## 7. Observability
+## 9. Observability
 
-- **CloudWatch Logs** — log group `/aws/lambda/kgen-eye-mcap-builder`.
-  - Each invocation prints downloaded file count, per-channel message counts, and final S3 key.
-- **DLQ alarm** — fires when ≥1 message in the SQS DLQ, which means Lambda
-  failed every automatic retry (two retries by default).
-- **Metrics** — standard Lambda metrics (Invocations, Errors, Duration, Throttles).
+- **CloudWatch Logs** — group `/aws/lambda/kgen-eye-mcap-builder`.
+  Every invocation prints: downloaded file count, per-channel message counts,
+  number of skipped channels, and the final S3 key.
+- **DLQ alarm** — fires on ≥ 1 message (Lambda failed every retry).
+- **Metrics** — standard Lambda `Invocations / Errors / Duration / Throttles`.
 
 ### Checking a DLQ message
 
@@ -169,24 +202,26 @@ aws sqs receive-message --queue-url $(aws cloudformation describe-stacks \
   --max-number-of-messages 1
 ```
 
-The SQS body contains the original S3 event — you can re-invoke the Lambda
-manually with it after fixing the root cause.
+The SQS body contains the original S3 event — replay it manually after a fix.
 
 ---
 
-## 8. Troubleshooting
+## 10. Troubleshooting
 
-| Symptom                                   | Likely cause                                         | Fix |
-| ----------------------------------------- | ---------------------------------------------------- | --- |
-| Lambda never fires                         | Bucket notification not attached.                    | Re-run `scripts/attach_s3_notification.sh`. |
-| Lambda fires but "not a sentinel"          | Normal — it only builds on the sentinel upload.      | Ignore. |
-| `FileNotFoundError: no MCAP-relevant...`   | iOS uploaded the sentinel before the JSONs.           | Bug in iOS sequencing — sentinel must be LAST. |
-| `MemoryError` / timeout                    | Very long session (> 1 h).                            | Bump `MemorySize`/`Timeout` in `template.yaml`. |
-| `AccessDenied` on `s3:PutObject`            | IAM role lost permissions.                            | Redeploy the stack. |
+| Symptom                                      | Likely cause                                              | Fix |
+| -------------------------------------------- | --------------------------------------------------------- | --- |
+| Lambda never fires                            | Bucket notification not attached.                         | Re-run `scripts/attach_s3_notification.sh`. |
+| Lambda fires but `"skipped": true`            | Normal — only builds on the sentinel upload.              | Ignore. |
+| `FileNotFoundError: no MCAP-relevant...`      | iOS uploaded the sentinel before the JSONs.               | Bug in iOS sequencing — sentinel must be LAST. |
+| `[/camera/head/video] cannot parse MP4`       | Chunked upload where one chunk is truncated.              | Re-upload the chunk; re-run `regenerate_mcaps.sh --prefix <that session>`. |
+| `/camera/head/calibration` absent             | `cameraIntrinsics` missing in `metadata_<code>.json`.     | Upgrade the iOS app to a build that populates intrinsics. |
+| Duration clamped to 120 s in metadata        | Session shorter than Figure's minimum.                    | Record ≥ 2 min; the metrics body still reports the true duration. |
+| `MemoryError` / timeout                       | Very long session (> 15 min) or very large MP4.           | Bump `MemorySize`/`Timeout`/`EphemeralStorage` in `template.yaml`. |
+| `AccessDenied` on `s3:PutObject`              | IAM role lost permissions.                                | Redeploy the stack. |
 
 ---
 
-## 9. Re-running a session manually
+## 11. Re-running a single session manually
 
 ```bash
 aws lambda invoke \
@@ -210,10 +245,8 @@ cat /tmp/mcap-invoke.json
 
 ---
 
-## 10. Tear-down
+## 12. Tear-down
 
 ```bash
-# Remove the S3 notification first (optional; leaving it is harmless).
-# Then:
 sam delete --stack-name kgen-eye-mcap-builder --region us-east-1
 ```

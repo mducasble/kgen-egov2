@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "foxglove.CompressedVideo",
+  "description": "A single compressed video frame.",
+  "type": "object",
+  "required": ["timestamp", "frame_id", "data", "format"],
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "required": ["sec", "nsec"],
+      "properties": {
+        "sec": { "type": "integer", "minimum": 0 },
+        "nsec": { "type": "integer", "minimum": 0, "maximum": 999999999 }
+      }
+    },
+    "frame_id": { "type": "string" },
+    "data": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "description": "H.264 NAL units (Annex B byte stream) for a single access unit."
+    },
+    "format": { "type": "string", "enum": ["h264"] }
+  }
+}

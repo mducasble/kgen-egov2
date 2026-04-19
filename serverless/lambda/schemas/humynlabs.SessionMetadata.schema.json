@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "humynlabs.SessionMetadata",
+  "description": "Session-level metadata emitted once per recording unit.",
+  "type": "object",
+  "required": [
+    "session_id",
+    "schema_version",
+    "recorded_at_epoch_ns",
+    "duration_ns",
+    "clock",
+    "task",
+    "capture_device",
+    "video_encoding"
+  ],
+  "properties": {
+    "session_id": { "type": "string", "minLength": 8 },
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "recorded_at_epoch_ns": { "type": "integer", "minimum": 0 },
+    "duration_ns": { "type": "integer", "minimum": 120000000000 },
+    "clock": {
+      "type": "object",
+      "required": ["source", "epoch_alignment"],
+      "properties": {
+        "source": { "type": "string" },
+        "epoch_alignment": {
+          "type": "string",
+          "enum": ["single_reference", "ntp", "ptp", "none"]
+        },
+        "epoch_alignment_precision_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["category", "vertical", "label"],
+      "properties": {
+        "category": { "type": "string", "enum": ["residential", "commercial"] },
+        "vertical": { "type": "string" },
+        "label": { "type": "string" }
+      }
+    },
+    "capture_device": {
+      "type": "object",
+      "required": ["type", "model", "mount"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["phone_builtin", "external_wired", "external_standalone"]
+        },
+        "model": { "type": "string" },
+        "mount": {
+          "type": "string",
+          "enum": ["headband", "helmet", "cap_clip", "eyewear_frame"]
+        },
+        "external_camera_approved_by_figure": { "type": "boolean" }
+      }
+    },
+    "video_encoding": {
+      "type": "object",
+      "required": [
+        "codec",
+        "resolution_width",
+        "resolution_height",
+        "fps_target",
+        "bitrate_mbps",
+        "gop_length",
+        "b_frames",
+        "hdr"
+      ],
+      "properties": {
+        "codec": { "type": "string", "enum": ["h264"] },
+        "resolution_width": { "type": "integer", "minimum": 1 },
+        "resolution_height": { "type": "integer", "minimum": 1 },
+        "fps_target": { "type": "number", "minimum": 1 },
+        "bitrate_mbps": { "type": "number", "minimum": 4, "maximum": 8 },
+        "gop_length": { "type": "integer", "enum": [30] },
+        "b_frames": { "type": "integer", "enum": [0] },
+        "hdr": { "type": "boolean", "enum": [false] },
+        "color_depth_bits": { "type": "integer", "enum": [8] }
+      }
+    },
+    "imu_config": {
+      "type": "object",
+      "properties": {
+        "target_rate_hz": { "type": "number", "minimum": 100, "maximum": 250 },
+        "gravity_included": { "type": "boolean" },
+        "coordinate_convention": { "type": "string" }
+      }
+    }
+  }
+}

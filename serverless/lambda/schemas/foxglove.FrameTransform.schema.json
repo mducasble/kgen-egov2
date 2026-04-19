@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "foxglove.FrameTransform",
+  "description": "Rigid transform between two coordinate frames. Published once for static extrinsics.",
+  "type": "object",
+  "required": ["timestamp", "parent_frame_id", "child_frame_id", "translation", "rotation"],
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "required": ["sec", "nsec"],
+      "properties": {
+        "sec": { "type": "integer", "minimum": 0 },
+        "nsec": { "type": "integer", "minimum": 0, "maximum": 999999999 }
+      }
+    },
+    "parent_frame_id": { "type": "string" },
+    "child_frame_id": { "type": "string" },
+    "translation": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      }
+    },
+    "rotation": {
+      "description": "Unit quaternion (x, y, z, w).",
+      "type": "object",
+      "required": ["x", "y", "z", "w"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" },
+        "w": { "type": "number" }
+      }
+    }
+  }
+}

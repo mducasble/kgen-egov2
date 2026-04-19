@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "humynlabs.SessionMetrics",
+  "description": "Measured characteristics of the recording. Pure measurements — no pass/fail verdicts.",
+  "type": "object",
+  "required": ["session_id", "computed_at_epoch_ns", "metrics_version", "metrics"],
+  "properties": {
+    "session_id": { "type": "string" },
+    "computed_at_epoch_ns": { "type": "integer", "minimum": 0 },
+    "metrics_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "clip_duration",
+        "video_fps",
+        "video_encoding",
+        "video_resolution",
+        "video_fov",
+        "imu_rate",
+        "imu_video_sync",
+        "head_pose_tracking",
+        "hand_visibility"
+      ],
+      "properties": {
+        "clip_duration":      { "$ref": "#/definitions/metric" },
+        "video_fps":          { "$ref": "#/definitions/metric" },
+        "video_encoding":     { "$ref": "#/definitions/metric" },
+        "video_resolution":   { "$ref": "#/definitions/metric" },
+        "video_fov":          { "$ref": "#/definitions/metric" },
+        "imu_rate":           { "$ref": "#/definitions/metric" },
+        "imu_video_sync":     { "$ref": "#/definitions/metric" },
+        "head_pose_tracking": { "$ref": "#/definitions/metric" },
+        "hand_visibility":    { "$ref": "#/definitions/metric" },
+        "lighting_quality":   { "$ref": "#/definitions/metric" },
+        "seated_indicator":   { "$ref": "#/definitions/metric" }
+      }
+    }
+  },
+  "definitions": {
+    "metric": {
+      "type": "object",
+      "required": ["measured_value", "measured_units", "method"],
+      "properties": {
+        "measured_value": { "type": ["number", "string", "boolean", "null"] },
+        "measured_units": { "type": "string" },
+        "method":         { "type": "string" }
+      }
+    }
+  }
+}
