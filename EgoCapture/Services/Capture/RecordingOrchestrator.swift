@@ -165,7 +165,22 @@ final class RecordingOrchestrator: ObservableObject {
 
         // Compute metrics
         let endEpochMs = Date().timeIntervalSince1970 * 1000.0
-        let durationSec = (endEpochMs - recordingStartEpochMs) / 1000.0
+        // Prefer the actual video span (first-to-last frame epoch) over
+        // the wall-clock start/stop delta. The wall-clock interval includes
+        // pre-capture setup overhead, post-capture finalisation, and any
+        // background pauses, which inflate the declared duration vs the
+        // real footage. Downstream (MCAP builder) already prefers the
+        // video span when present; matching the source here keeps
+        // metadata.json self-consistent.
+        let wallClockDurationSec = (endEpochMs - recordingStartEpochMs) / 1000.0
+        let durationSec: Double = {
+            guard
+                let firstMs = videoTS.first?.timestampEpochMs,
+                let lastMs = videoTS.last?.timestampEpochMs,
+                lastMs > firstMs
+            else { return wallClockDurationSec }
+            return (lastMs - firstMs) / 1000.0
+        }()
         let totalFrames = videoCaptureService?.frameIndex ?? 0
         let droppedFrames = videoCaptureService?.droppedFrames ?? 0
         let resW = videoCaptureService?.actualResolutionWidth ?? 1920
