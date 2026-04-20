@@ -111,13 +111,22 @@ def build_mcap(
     if session_start_ns <= 0:
         raise ValueError("session metadata missing startTimeEpochMs")
 
+    # Derive the recording's true duration from the video frame timestamps
+    # (first-to-last span in capture order). This is the single source of
+    # truth for both the SessionMetadata and SessionMetrics messages — see
+    # transforms.session_metadata for the rationale.
+    frame_timestamps_ms = _load_frame_timestamps(session_dir, session_code)
+    video_duration_ns = _compute_video_duration_ns(frame_timestamps_ms)
+
     with output_path.open("wb") as fp:
         writer = Writer(fp, compression=CompressionType.ZSTD)
         writer.start(profile="", library="humynlabs-mcap-builder/1.0")
 
         channel_ids = _register_channels(writer, stats)
 
-        _emit_session_metadata(writer, channel_ids, stats, metadata, session_code)
+        _emit_session_metadata(
+            writer, channel_ids, stats, metadata, session_code, video_duration_ns
+        )
         _emit_calibration(writer, channel_ids, stats, metadata, session_start_ns)
         _emit_frame_transform(writer, channel_ids, stats, metadata, session_start_ns)
 
@@ -132,7 +141,8 @@ def build_mcap(
             log.info("[%s] no MP4 supplied; skipping video embedding", TOPIC_VIDEO)
 
         _emit_session_metrics(
-            writer, channel_ids, stats, validation, metadata, session_code, session_start_ns
+            writer, channel_ids, stats, validation, metadata, session_code,
+            session_start_ns, video_duration_ns,
         )
 
         writer.finish()
@@ -171,17 +181,36 @@ def _register_channels(writer: Writer, stats: BuildStats) -> dict[str, int]:
 # Per-channel emitters
 # ----------------------------------------------------------------------------
 
+def _compute_video_duration_ns(frame_timestamps_ms: list[float]) -> int:
+    """Return last-frame minus first-frame span in nanoseconds.
+
+    Returns 0 when fewer than two usable timestamps exist (single-frame
+    sessions or missing video_timestamps). The caller is expected to
+    treat 0 as "no override — fall back to metadata.durationSec".
+    """
+    if len(frame_timestamps_ms) < 2:
+        return 0
+    span_ms = frame_timestamps_ms[-1] - frame_timestamps_ms[0]
+    if span_ms <= 0:
+        return 0
+    return int(round(span_ms * 1_000_000))
+
+
 def _emit_session_metadata(
     writer: Writer,
     channel_ids: dict[str, int],
     stats: BuildStats,
     metadata: dict[str, Any],
     session_code: str,
+    measured_duration_ns: int = 0,
 ) -> None:
     chan = channel_ids.get(TOPIC_SESSION_METADATA)
     if chan is None:
         return
-    msg = transforms.session_metadata(metadata, session_code)
+    msg = transforms.session_metadata(
+        metadata, session_code,
+        measured_duration_ns=measured_duration_ns or None,
+    )
     log_ns = msg["recorded_at_epoch_ns"] or 0
     _write(writer, chan, log_ns, msg)
     stats.channel_counts[TOPIC_SESSION_METADATA] = 1
@@ -342,18 +371,29 @@ def _emit_session_metrics(
     metadata: dict[str, Any],
     session_code: str,
     session_start_ns: int,
+    measured_duration_ns: int = 0,
 ) -> None:
     chan = channel_ids.get(TOPIC_SESSION_METRICS)
     if chan is None:
         return
     # Emit metrics at the end of the session timeline so Foxglove shows them
-    # chronologically after all the video/IMU samples.
-    duration_ns = 0
-    duration_sec = metadata.get("durationSec")
-    if isinstance(duration_sec, (int, float)) and duration_sec > 0:
-        duration_ns = int(round(duration_sec * 1_000_000_000))
+    # chronologically after all the video/IMU samples. Prefer the measured
+    # video-span duration over metadata.durationSec so the metrics message
+    # agrees with the SessionMetadata message we emit above.
+    if measured_duration_ns > 0:
+        duration_ns = measured_duration_ns
+        duration_sec_for_metric: Optional[float] = duration_ns / 1_000_000_000
+    else:
+        duration_ns = 0
+        duration_sec = metadata.get("durationSec")
+        if isinstance(duration_sec, (int, float)) and duration_sec > 0:
+            duration_ns = int(round(duration_sec * 1_000_000_000))
+        duration_sec_for_metric = None  # let transforms.session_metrics fall back
     computed_at_ns = session_start_ns + duration_ns
-    msg = transforms.session_metrics(validation, metadata, computed_at_ns, session_code)
+    msg = transforms.session_metrics(
+        validation, metadata, computed_at_ns, session_code,
+        measured_duration_sec=duration_sec_for_metric,
+    )
     _write(writer, chan, computed_at_ns, msg)
     stats.channel_counts[TOPIC_SESSION_METRICS] = 1
     stats.total_messages += 1

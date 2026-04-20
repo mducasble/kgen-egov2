@@ -255,13 +255,39 @@ SPEC_MIN_DURATION_SEC = 120.0
 def session_metadata(
     metadata: dict[str, Any],
     session_code: str,
+    measured_duration_ns: Optional[int] = None,
 ) -> dict[str, Any]:
-    """Build a ``humynlabs.SessionMetadata`` from the iOS metadata."""
+    """Build a ``humynlabs.SessionMetadata`` from the iOS metadata.
+
+    ``measured_duration_ns`` takes precedence over ``metadata.durationSec``
+    when provided and positive. The builder derives it from
+    ``video_timestamps.jsonl`` (first/last frame epoch span), which is the
+    only duration that matches the actual footage in the MCAP — the
+    ``durationSec`` field in ``metadata.json`` is wall-clock between
+    ``startRecording`` and ``stopRecording`` on the iOS side and can
+    include pre-capture setup overhead, background pauses, and the
+    finalisation window, inflating the declared span vs the video.
+    """
     session_id = str(metadata.get("sessionId") or session_code)
 
     start_ms = metadata.get("startTimeEpochMs") or 0
-    duration_sec = float(metadata.get("durationSec") or 0)
-    duration_ns = int(round(duration_sec * 1_000_000_000))
+    declared_duration_sec = float(metadata.get("durationSec") or 0)
+
+    if isinstance(measured_duration_ns, (int, float)) and measured_duration_ns > 0:
+        duration_ns = int(measured_duration_ns)
+        duration_sec = duration_ns / 1_000_000_000
+        if declared_duration_sec > 0:
+            delta_pct = abs(duration_sec - declared_duration_sec) / declared_duration_sec * 100
+            if delta_pct > 5.0:
+                log.warning(
+                    "session duration mismatch: metadata.durationSec=%.3fs vs "
+                    "video span=%.3fs (Δ=%.1f%%). Emitting video span as truth.",
+                    declared_duration_sec, duration_sec, delta_pct,
+                )
+    else:
+        duration_sec = declared_duration_sec
+        duration_ns = int(round(duration_sec * 1_000_000_000))
+
     if duration_sec < SPEC_MIN_DURATION_SEC:
         log.info(
             "session duration %.2fs < %.0fs Figure minimum — emitting real value; schema may reject",
@@ -402,8 +428,14 @@ def session_metrics(
     metadata: dict[str, Any],
     computed_at_ns: int,
     session_code: str,
+    measured_duration_sec: Optional[float] = None,
 ) -> dict[str, Any]:
-    """Build a ``humynlabs.SessionMetrics`` — measurements only, no verdicts."""
+    """Build a ``humynlabs.SessionMetrics`` — measurements only, no verdicts.
+
+    ``measured_duration_sec``, when positive, replaces
+    ``metadata.durationSec`` for the ``clip_duration`` metric. See the
+    ``session_metadata`` docstring for why this override exists.
+    """
     session_id = str(
         validation.get("sessionId") or metadata.get("sessionId") or session_code
     )
@@ -437,10 +469,15 @@ def session_metrics(
         f"_{'hdr' if enc.get('hdr') else '8bit'}"
     )
 
-    duration = _safe_float(metadata.get("durationSec"))
+    if isinstance(measured_duration_sec, (int, float)) and measured_duration_sec > 0:
+        duration: Optional[float] = float(measured_duration_sec)
+        duration_method = "duration_from_video_timestamps"
+    else:
+        duration = _safe_float(metadata.get("durationSec"))
+        duration_method = "duration_from_session_metadata"
 
     metrics: dict[str, Any] = {
-        "clip_duration": _metric(duration, "seconds", "duration_from_session_metadata"),
+        "clip_duration": _metric(duration, "seconds", duration_method),
         "video_fps": _metric(
             _safe_float(video.get("fps")), "Hz", "inter_frame_delta_mean_inverse"
         ),
