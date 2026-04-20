@@ -231,7 +231,7 @@ private struct KEPillSurface<S: InsettableShape>: ViewModifier {
 
 // MARK: - Brand lockup
 
-private struct BrandLockup: View {
+struct BrandLockup: View {
     var body: some View {
         VStack(spacing: 6) {
             Text("KGeN© EYE")

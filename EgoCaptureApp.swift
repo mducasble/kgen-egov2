@@ -30,9 +30,30 @@ struct EgoCaptureApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // Ambient Glass test — revert this single line to `ContentView()` to
-            // roll back to the previous home layout.
-            KGenEyeHomeView()
+            RootView()
         }
+    }
+}
+
+/// Top-level view switcher between the dummy `LoginView` and the real
+/// `KGenEyeHomeView`. Auth is purely cosmetic for now — the real wiring
+/// (Keychain persistence, Google SDK, backend call) lands alongside the
+/// auth provider integration.
+private struct RootView: View {
+    @State private var isAuthenticated = false
+
+    var body: some View {
+        ZStack {
+            if isAuthenticated {
+                KGenEyeHomeView()
+                    .transition(.opacity)
+            } else {
+                LoginView(onAuthenticated: {
+                    isAuthenticated = true
+                })
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.35), value: isAuthenticated)
     }
 }
