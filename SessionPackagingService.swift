@@ -100,6 +100,9 @@ final class SessionPackagingService {
             case "metadata.json":
                 type = "json"
                 description = "Session metadata, device info, capture config, and QC summary"
+            case "taxonomy.json":
+                type = "json"
+                description = "Taxonomy selection (viewpoint, scenario, location, task) plus auto-detected day/night. Out-of-MCAP annotation."
             case "hand_tracking_comparison.json":
                 type = "json"
                 description = "Comparison summary between Apple Vision and MediaPipe hand tracking"

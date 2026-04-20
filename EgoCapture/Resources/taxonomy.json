@@ -1,0 +1,414 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-04-20",
+  "description": "Taxonomia hierárquica de 5 níveis para classificação de vídeos egocêntricos. Baseada em padrões de mercado (Ego4D, EPIC-KITCHENS, Ego-Exo4D, HoloAssist).",
+  "levels": {
+    "1": "viewpoint",
+    "2": "domain",
+    "3": "scenario",
+    "4": "location",
+    "5": "task_category"
+  },
+  "viewpoints": [
+    {
+      "code": "egocentric",
+      "label_pt": "Egocêntrica",
+      "label_en": "Egocentric",
+      "description": "Câmera em primeira pessoa (head-mounted, chest-mounted, glasses)"
+    },
+    {
+      "code": "exocentric",
+      "label_pt": "Exocêntrica",
+      "label_en": "Exocentric",
+      "description": "Câmera em terceira pessoa (fixa, tripé, observador)"
+    },
+    {
+      "code": "hybrid",
+      "label_pt": "Híbrida",
+      "label_en": "Hybrid",
+      "description": "Múltiplas câmeras sincronizadas (ego + exo) — padrão Ego-Exo4D"
+    }
+  ],
+  "domains": [
+    {
+      "code": "residential",
+      "label_pt": "Residencial",
+      "label_en": "Residential",
+      "description": "Casa, apartamento, AirBnB"
+    },
+    {
+      "code": "commercial",
+      "label_pt": "Comercial",
+      "label_en": "Commercial",
+      "description": "Restaurante, loja, escritório, pet shop"
+    },
+    {
+      "code": "industrial",
+      "label_pt": "Industrial",
+      "label_en": "Industrial",
+      "description": "Fábrica, oficina, armazém"
+    },
+    {
+      "code": "institutional",
+      "label_pt": "Institucional",
+      "label_en": "Institutional",
+      "description": "Escola, hospital, repartição pública"
+    },
+    {
+      "code": "public_outdoor",
+      "label_pt": "Espaço Público Externo",
+      "label_en": "Public Outdoor",
+      "description": "Rua, parque, praça"
+    },
+    {
+      "code": "transport",
+      "label_pt": "Transporte",
+      "label_en": "Transport",
+      "description": "Veículo, transporte público, aeroporto"
+    }
+  ],
+  "scenarios": [
+    {
+      "code": "indoor",
+      "label_pt": "Interno",
+      "label_en": "Indoor",
+      "description": "Totalmente dentro de estrutura fechada"
+    },
+    {
+      "code": "outdoor",
+      "label_pt": "Externo",
+      "label_en": "Outdoor",
+      "description": "Totalmente ao ar livre"
+    },
+    {
+      "code": "semi_outdoor",
+      "label_pt": "Semi-externo",
+      "label_en": "Semi-outdoor",
+      "description": "Varanda coberta, garagem aberta, quiosque"
+    },
+    {
+      "code": "transition",
+      "label_pt": "Transição",
+      "label_en": "Transition",
+      "description": "Passagem entre ambientes (ex: saindo de casa)"
+    }
+  ],
+  "locations": [
+    { "code": "kitchen", "label_pt": "Cozinha", "label_en": "Kitchen", "domain": "residential", "scenario": "indoor" },
+    { "code": "laundry_room", "label_pt": "Área de Serviço", "label_en": "Laundry Room", "domain": "residential", "scenario": "indoor" },
+    { "code": "living_room", "label_pt": "Sala de Estar", "label_en": "Living Room", "domain": "residential", "scenario": "indoor" },
+    { "code": "dining_room", "label_pt": "Sala de Jantar", "label_en": "Dining Room", "domain": "residential", "scenario": "indoor" },
+    { "code": "bedroom", "label_pt": "Quarto", "label_en": "Bedroom", "domain": "residential", "scenario": "indoor" },
+    { "code": "kids_bedroom", "label_pt": "Quarto Infantil", "label_en": "Kids Bedroom", "domain": "residential", "scenario": "indoor" },
+    { "code": "bathroom", "label_pt": "Banheiro", "label_en": "Bathroom", "domain": "residential", "scenario": "indoor" },
+    { "code": "home_office", "label_pt": "Escritório Doméstico", "label_en": "Home Office", "domain": "residential", "scenario": "indoor" },
+    { "code": "pantry", "label_pt": "Despensa", "label_en": "Pantry", "domain": "residential", "scenario": "indoor" },
+    { "code": "closet", "label_pt": "Closet / Guarda-roupa", "label_en": "Closet", "domain": "residential", "scenario": "indoor" },
+    { "code": "hallway", "label_pt": "Corredor", "label_en": "Hallway", "domain": "residential", "scenario": "indoor" },
+    { "code": "entryway", "label_pt": "Hall de Entrada", "label_en": "Entryway", "domain": "residential", "scenario": "indoor" },
+    { "code": "staircase", "label_pt": "Escada", "label_en": "Staircase", "domain": "residential", "scenario": "indoor" },
+    { "code": "indoor_pet_area", "label_pt": "Área Pet Interna", "label_en": "Indoor Pet Area", "domain": "residential", "scenario": "indoor" },
+    { "code": "garage_indoor", "label_pt": "Garagem Fechada", "label_en": "Indoor Garage", "domain": "residential", "scenario": "indoor" },
+    { "code": "basement", "label_pt": "Porão / Subsolo", "label_en": "Basement", "domain": "residential", "scenario": "indoor" },
+    { "code": "attic", "label_pt": "Sótão", "label_en": "Attic", "domain": "residential", "scenario": "indoor" },
+    { "code": "home_gym", "label_pt": "Academia Doméstica", "label_en": "Home Gym", "domain": "residential", "scenario": "indoor" },
+
+    { "code": "balcony", "label_pt": "Varanda / Sacada", "label_en": "Balcony", "domain": "residential", "scenario": "semi_outdoor" },
+    { "code": "backyard", "label_pt": "Quintal", "label_en": "Backyard", "domain": "residential", "scenario": "outdoor" },
+    { "code": "front_yard", "label_pt": "Jardim Frontal", "label_en": "Front Yard", "domain": "residential", "scenario": "outdoor" },
+    { "code": "garden", "label_pt": "Jardim", "label_en": "Garden", "domain": "residential", "scenario": "outdoor" },
+    { "code": "vegetable_garden", "label_pt": "Horta", "label_en": "Vegetable Garden", "domain": "residential", "scenario": "outdoor" },
+    { "code": "pool_area", "label_pt": "Área de Piscina", "label_en": "Pool Area", "domain": "residential", "scenario": "outdoor" },
+    { "code": "bbq_area", "label_pt": "Área de Churrasqueira", "label_en": "BBQ Area", "domain": "residential", "scenario": "semi_outdoor" },
+    { "code": "outdoor_pet_area", "label_pt": "Área Pet Externa", "label_en": "Outdoor Pet Area", "domain": "residential", "scenario": "outdoor" },
+    { "code": "rooftop", "label_pt": "Cobertura / Terraço", "label_en": "Rooftop", "domain": "residential", "scenario": "outdoor" },
+    { "code": "driveway", "label_pt": "Entrada de Veículos", "label_en": "Driveway", "domain": "residential", "scenario": "outdoor" },
+
+    { "code": "restaurant_kitchen", "label_pt": "Cozinha Profissional", "label_en": "Restaurant Kitchen", "domain": "commercial", "scenario": "indoor" },
+    { "code": "restaurant_dining", "label_pt": "Salão de Restaurante", "label_en": "Restaurant Dining", "domain": "commercial", "scenario": "indoor" },
+    { "code": "cafe", "label_pt": "Cafeteria", "label_en": "Cafe", "domain": "commercial", "scenario": "indoor" },
+    { "code": "bar", "label_pt": "Bar", "label_en": "Bar", "domain": "commercial", "scenario": "indoor" },
+    { "code": "retail_store", "label_pt": "Loja de Varejo", "label_en": "Retail Store", "domain": "commercial", "scenario": "indoor" },
+    { "code": "supermarket", "label_pt": "Supermercado", "label_en": "Supermarket", "domain": "commercial", "scenario": "indoor" },
+    { "code": "office_space", "label_pt": "Escritório Corporativo", "label_en": "Office", "domain": "commercial", "scenario": "indoor" },
+    { "code": "coworking", "label_pt": "Coworking", "label_en": "Coworking", "domain": "commercial", "scenario": "indoor" },
+    { "code": "clinic", "label_pt": "Consultório / Clínica", "label_en": "Clinic", "domain": "commercial", "scenario": "indoor" },
+    { "code": "pharmacy", "label_pt": "Farmácia", "label_en": "Pharmacy", "domain": "commercial", "scenario": "indoor" },
+    { "code": "salon", "label_pt": "Salão de Beleza", "label_en": "Salon", "domain": "commercial", "scenario": "indoor" },
+    { "code": "gym_commercial", "label_pt": "Academia Comercial", "label_en": "Commercial Gym", "domain": "commercial", "scenario": "indoor" },
+    { "code": "workshop", "label_pt": "Oficina", "label_en": "Workshop", "domain": "commercial", "scenario": "indoor" },
+    { "code": "warehouse_indoor", "label_pt": "Armazém / Depósito", "label_en": "Warehouse", "domain": "commercial", "scenario": "indoor" },
+    { "code": "pet_shop", "label_pt": "Pet Shop", "label_en": "Pet Shop", "domain": "commercial", "scenario": "indoor" },
+    { "code": "veterinary", "label_pt": "Clínica Veterinária", "label_en": "Veterinary", "domain": "commercial", "scenario": "indoor" },
+
+    { "code": "parking_lot", "label_pt": "Estacionamento", "label_en": "Parking Lot", "domain": "commercial", "scenario": "outdoor" },
+    { "code": "loading_dock", "label_pt": "Doca de Carga", "label_en": "Loading Dock", "domain": "commercial", "scenario": "semi_outdoor" },
+    { "code": "outdoor_market", "label_pt": "Feira / Mercado ao Ar Livre", "label_en": "Outdoor Market", "domain": "commercial", "scenario": "outdoor" },
+    { "code": "event_area", "label_pt": "Área de Evento", "label_en": "Event Area", "domain": "commercial", "scenario": "outdoor" },
+
+    { "code": "street", "label_pt": "Rua / Calçada", "label_en": "Street", "domain": "public_outdoor", "scenario": "outdoor" },
+    { "code": "park", "label_pt": "Parque", "label_en": "Park", "domain": "public_outdoor", "scenario": "outdoor" },
+    { "code": "plaza", "label_pt": "Praça", "label_en": "Plaza", "domain": "public_outdoor", "scenario": "outdoor" },
+    { "code": "beach", "label_pt": "Praia", "label_en": "Beach", "domain": "public_outdoor", "scenario": "outdoor" },
+    { "code": "trail", "label_pt": "Trilha", "label_en": "Trail", "domain": "public_outdoor", "scenario": "outdoor" },
+    { "code": "sports_field", "label_pt": "Campo Esportivo", "label_en": "Sports Field", "domain": "public_outdoor", "scenario": "outdoor" },
+
+    { "code": "car_interior", "label_pt": "Interior de Veículo", "label_en": "Car Interior", "domain": "transport", "scenario": "indoor" },
+    { "code": "public_transit", "label_pt": "Transporte Público", "label_en": "Public Transit", "domain": "transport", "scenario": "indoor" },
+    { "code": "bicycle", "label_pt": "Bicicleta", "label_en": "Bicycle", "domain": "transport", "scenario": "outdoor" }
+  ],
+  "task_categories": [
+    {
+      "code": "cleaning",
+      "label_pt": "Limpeza",
+      "label_en": "Cleaning",
+      "description": "Remover sujeira de superfícies, objetos, ambientes",
+      "group": "housekeeping"
+    },
+    {
+      "code": "tidying",
+      "label_pt": "Organização",
+      "label_en": "Tidying",
+      "description": "Arrumar, guardar, posicionar objetos sem necessariamente limpar",
+      "group": "housekeeping"
+    },
+    {
+      "code": "laundry",
+      "label_pt": "Lavagem de Roupas",
+      "label_en": "Laundry",
+      "description": "Coletar, lavar, secar, dobrar, guardar roupas",
+      "group": "housekeeping"
+    },
+    {
+      "code": "dishwashing",
+      "label_pt": "Lavagem de Louça",
+      "label_en": "Dishwashing",
+      "description": "Lavar utensílios e louças",
+      "group": "housekeeping"
+    },
+    {
+      "code": "waste_management",
+      "label_pt": "Descarte / Lixo",
+      "label_en": "Waste Management",
+      "description": "Separar, descartar, levar lixo",
+      "group": "housekeeping"
+    },
+    {
+      "code": "food_preparation",
+      "label_pt": "Preparo de Alimentos",
+      "label_en": "Food Preparation",
+      "description": "Separar, lavar, cortar, medir ingredientes (antes do cozimento)",
+      "group": "food"
+    },
+    {
+      "code": "cooking",
+      "label_pt": "Cozimento",
+      "label_en": "Cooking",
+      "description": "Aplicar calor — fogão, forno, micro-ondas, grelha",
+      "group": "food"
+    },
+    {
+      "code": "baking",
+      "label_pt": "Panificação",
+      "label_en": "Baking",
+      "description": "Subcategoria de cooking — assar no forno",
+      "group": "food"
+    },
+    {
+      "code": "food_serving",
+      "label_pt": "Servir Alimentos",
+      "label_en": "Food Serving",
+      "description": "Empratar, servir, montar mesa",
+      "group": "food"
+    },
+    {
+      "code": "eating",
+      "label_pt": "Consumo de Alimentos",
+      "label_en": "Eating",
+      "description": "Comer, beber, degustar",
+      "group": "food"
+    },
+    {
+      "code": "beverage_preparation",
+      "label_pt": "Preparo de Bebidas",
+      "label_en": "Beverage Preparation",
+      "description": "Café, suco, drinks",
+      "group": "food"
+    },
+    {
+      "code": "personal_care",
+      "label_pt": "Cuidado Pessoal",
+      "label_en": "Personal Care",
+      "description": "Banho, escovar dentes, maquiagem, vestir-se",
+      "group": "self_care"
+    },
+    {
+      "code": "grooming",
+      "label_pt": "Higiene e Arrumação",
+      "label_en": "Grooming",
+      "description": "Pentear, barbear, cortar unhas",
+      "group": "self_care"
+    },
+    {
+      "code": "health_care",
+      "label_pt": "Cuidado com Saúde",
+      "label_en": "Health Care",
+      "description": "Tomar medicamento, aferir pressão, curativo",
+      "group": "self_care"
+    },
+    {
+      "code": "childcare",
+      "label_pt": "Cuidado com Crianças",
+      "label_en": "Childcare",
+      "description": "Alimentar, vestir, brincar, banho de criança",
+      "group": "caregiving"
+    },
+    {
+      "code": "eldercare",
+      "label_pt": "Cuidado com Idosos",
+      "label_en": "Eldercare",
+      "description": "Assistência a idosos, mobilidade, medicação",
+      "group": "caregiving"
+    },
+    {
+      "code": "pet_care",
+      "label_pt": "Cuidado com Pets",
+      "label_en": "Pet Care",
+      "description": "Alimentar, banhar, passear, brincar com pet",
+      "group": "caregiving"
+    },
+    {
+      "code": "pet_training",
+      "label_pt": "Adestramento",
+      "label_en": "Pet Training",
+      "description": "Comandos, reforço positivo, socialização",
+      "group": "caregiving"
+    },
+    {
+      "code": "plant_care",
+      "label_pt": "Cuidado com Plantas",
+      "label_en": "Plant Care",
+      "description": "Regar, podar, adubar plantas domésticas",
+      "group": "caregiving"
+    },
+    {
+      "code": "gardening",
+      "label_pt": "Jardinagem",
+      "label_en": "Gardening",
+      "description": "Cultivo, paisagismo, horta externa",
+      "group": "outdoor_work"
+    },
+    {
+      "code": "maintenance",
+      "label_pt": "Manutenção",
+      "label_en": "Maintenance",
+      "description": "Consertar, trocar peças, lubrificar",
+      "group": "handiwork"
+    },
+    {
+      "code": "repair",
+      "label_pt": "Reparo",
+      "label_en": "Repair",
+      "description": "Subcategoria de maintenance — consertos específicos",
+      "group": "handiwork"
+    },
+    {
+      "code": "assembly",
+      "label_pt": "Montagem",
+      "label_en": "Assembly",
+      "description": "Montar móveis, brinquedos, kits",
+      "group": "handiwork"
+    },
+    {
+      "code": "crafting",
+      "label_pt": "Trabalho Manual",
+      "label_en": "Crafting",
+      "description": "Artesanato, costura, tricô, DIY",
+      "group": "handiwork"
+    },
+    {
+      "code": "shopping",
+      "label_pt": "Compras",
+      "label_en": "Shopping",
+      "description": "Selecionar produtos, checkout, carregar compras",
+      "group": "errands"
+    },
+    {
+      "code": "carrying",
+      "label_pt": "Transporte Manual",
+      "label_en": "Carrying",
+      "description": "Carregar, mover objetos entre locais",
+      "group": "errands"
+    },
+    {
+      "code": "driving",
+      "label_pt": "Dirigir",
+      "label_en": "Driving",
+      "description": "Operar veículo",
+      "group": "mobility"
+    },
+    {
+      "code": "commuting",
+      "label_pt": "Deslocamento",
+      "label_en": "Commuting",
+      "description": "Caminhada, transporte entre locais",
+      "group": "mobility"
+    },
+    {
+      "code": "communication",
+      "label_pt": "Comunicação",
+      "label_en": "Communication",
+      "description": "Conversar, telefonar, videochamada",
+      "group": "social"
+    },
+    {
+      "code": "socializing",
+      "label_pt": "Socialização",
+      "label_en": "Socializing",
+      "description": "Conversas em grupo, recepção de visitas",
+      "group": "social"
+    },
+    {
+      "code": "working_desk",
+      "label_pt": "Trabalho de Escritório",
+      "label_en": "Desk Work",
+      "description": "Computador, leitura, escrita, reunião",
+      "group": "productive"
+    },
+    {
+      "code": "studying",
+      "label_pt": "Estudo",
+      "label_en": "Studying",
+      "description": "Leitura, anotações, exercícios",
+      "group": "productive"
+    },
+    {
+      "code": "leisure",
+      "label_pt": "Lazer",
+      "label_en": "Leisure",
+      "description": "TV, jogos, relaxamento",
+      "group": "recreation"
+    },
+    {
+      "code": "exercise",
+      "label_pt": "Exercício Físico",
+      "label_en": "Exercise",
+      "description": "Musculação, cardio, alongamento",
+      "group": "recreation"
+    },
+    {
+      "code": "sports",
+      "label_pt": "Prática Esportiva",
+      "label_en": "Sports",
+      "description": "Esportes específicos (futebol, tênis, etc.)",
+      "group": "recreation"
+    },
+    {
+      "code": "music_practice",
+      "label_pt": "Prática Musical",
+      "label_en": "Music Practice",
+      "description": "Tocar instrumento, cantar",
+      "group": "recreation"
+    }
+  ]
+}

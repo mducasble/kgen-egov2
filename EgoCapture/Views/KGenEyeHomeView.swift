@@ -386,7 +386,7 @@ struct KGenEyeHomeView: View {
 
                         VStack(spacing: 14) {
                             NavigationLink {
-                                ActivitiesView()
+                                ScenarioPickerView()
                             } label: {
                                 KEPillButton(
                                     label: "Start Recording",

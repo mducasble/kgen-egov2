@@ -2,10 +2,12 @@ import SwiftUI
 import AVFoundation
 
 struct RecordingView: View {
-    /// Optional activity selected via the Activities → Briefing flow. When
-    /// present, its title is shown in the recording chrome and fed into
-    /// `environment.taskDescription` of the session metadata.
-    let activity: Activity?
+    /// Optional taxonomy selection coming from the wizard. When present, it
+    /// drives the chrome (top pill, sidebar card) and is persisted as
+    /// `taxonomy.json` next to `metadata.json` by the orchestrator. The
+    /// `taskCategoryLabelPt` also flows into `environment.taskDescription`
+    /// of the session metadata.
+    let taxonomy: SessionTaxonomy?
 
     @StateObject private var orchestrator = RecordingOrchestrator()
     @StateObject private var idlePreview = IdlePreviewSession()
@@ -13,8 +15,8 @@ struct RecordingView: View {
 
     @State private var flashIconOn = false
 
-    init(activity: Activity? = nil) {
-        self.activity = activity
+    init(taxonomy: SessionTaxonomy? = nil) {
+        self.taxonomy = taxonomy
     }
 
     // FOV diagnostic UI state — disabled by default. Re-enable together with
@@ -50,17 +52,25 @@ struct RecordingView: View {
             } else {
                 AmbientImageBackdrop()
                 idleLayout
+                    .ignoresSafeArea(.container, edges: .horizontal)
+                idleBackButton
             }
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(orchestrator.isRecording)
+        // Always hide the system back button. In landscape on iOS 26 it
+        // renders as a circular glass chevron at top-left and visually
+        // collides with the GlassPane chrome. We draw our own back affordance
+        // inside the pane (idle state) — recording state intentionally has no
+        // back button so users stop the take first.
+        .navigationBarBackButtonHidden(true)
         .toolbarBackground(.hidden, for: .navigationBar)
         .preferredColorScheme(.light)
         .tint(KE.ink1)
         .onAppear {
             OrientationLock.shared.lock(.landscapeRight)
-            orchestrator.activityTitle = activity?.title
+            orchestrator.activityTitle = taxonomy?.taskCategoryLabelPt
+            orchestrator.taxonomySelection = taxonomy
             if !orchestrator.isRecording { idlePreview.start() }
         }
         .onDisappear {
@@ -78,8 +88,45 @@ struct RecordingView: View {
 
     // MARK: - Idle (pre-recording)
 
+    /// Custom back affordance for the idle layout. Sits above the pane in
+    /// the same top-left corner the system would use, but with a footprint
+    /// we control, so it never crops or shifts the camera tile underneath.
+    private var idleBackButton: some View {
+        VStack {
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(KE.ink1)
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(.ultraThinMaterial))
+                        .overlay(
+                            Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                        )
+                        .shadow(
+                            color: Color(red: 30/255, green: 40/255, blue: 55/255).opacity(0.18),
+                            radius: 6, x: 0, y: 3
+                        )
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            Spacer()
+        }
+        .padding(.top, 12)
+        .padding(.leading, 12)
+    }
+
     private var idleLayout: some View {
-        GlassPane(insets: EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14)) {
+        // Symmetric, tight insets so the pane uses the full landscape canvas.
+        // We ignore the horizontal safe area because in landscape the sensor
+        // housing creates a one-sided leading inset (~50pt) that would push
+        // the pane visibly off-center otherwise. The back affordance is
+        // drawn as an overlay (see `idleBackButton`) and *does* respect the
+        // safe area, so it sits where the user expects.
+        GlassPane(insets: EdgeInsets(top: 6, leading: 14, bottom: 10, trailing: 14)) {
             HStack(spacing: 16) {
                 previewContent
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -98,14 +145,22 @@ struct RecordingView: View {
                     .shadow(color: .black.opacity(0.08), radius: 16, y: 8)
 
                 VStack(spacing: 14) {
-                    if let activity = activity {
+                    if let taxonomy = taxonomy {
                         EGOSidebarCard {
-                            VStack(spacing: 4) {
-                                Text("Activity")
-                                    .font(.caption2.weight(.semibold))
-                                    .tracking(0.5)
-                                    .foregroundStyle(KE.ink3)
-                                Text(activity.title)
+                            VStack(spacing: 6) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: taxonomy.scenarioBucket == "indoor" ? "house.fill" : "tree.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(KE.ink3)
+                                    Text(taxonomy.locationLabelPt.uppercased())
+                                        .font(.caption2.weight(.semibold))
+                                        .tracking(0.5)
+                                        .foregroundStyle(KE.ink3)
+                                    Image(systemName: taxonomy.timeOfDay == "day" ? "sun.max.fill" : "moon.stars.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(KE.ink3)
+                                }
+                                Text(taxonomy.taskCategoryLabelPt)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(KE.ink1)
                                     .multilineTextAlignment(.center)
@@ -153,8 +208,8 @@ struct RecordingView: View {
 
                 Spacer()
 
-                if let activity = activity {
-                    EGOCaptureTopPill(title: activity.title.uppercased())
+                if let taxonomy = taxonomy {
+                    EGOCaptureTopPill(title: taxonomy.taskCategoryLabelPt.uppercased())
                         .layoutPriority(1)
                     Spacer()
                 }

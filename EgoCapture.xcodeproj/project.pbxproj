@@ -55,9 +55,11 @@
 		AA000085 /* UploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000085 /* UploadManager.swift */; };
 		AA000086 /* EmbeddedAWSCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000086 /* EmbeddedAWSCredentials.swift */; };
 		AA000100 /* EmbeddedAWSSecrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000100 /* EmbeddedAWSSecrets.swift */; };
-		AA000101 /* Activity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000101 /* Activity.swift */; };
-		AA000102 /* ActivitiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000102 /* ActivitiesView.swift */; };
 		AA000103 /* ActivityBriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000103 /* ActivityBriefingView.swift */; };
+		AA000110 /* Taxonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000110 /* Taxonomy.swift */; };
+		AA000111 /* SessionTaxonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000111 /* SessionTaxonomy.swift */; };
+		AA000112 /* TaxonomyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000112 /* TaxonomyPickerView.swift */; };
+		AA000113 /* taxonomy.json in Resources */ = {isa = PBXBuildFile; fileRef = AB000113 /* taxonomy.json */; };
 		AA000104 /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000104 /* ThumbnailGenerator.swift */; };
 		AA000105 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000105 /* LoginView.swift */; };
 		AA000087 /* SessionUploadNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000087 /* SessionUploadNotification.swift */; };
@@ -119,9 +121,11 @@
 		AB000085 /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
 		AB000086 /* EmbeddedAWSCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedAWSCredentials.swift; sourceTree = "<group>"; };
 		AB000100 /* EmbeddedAWSSecrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedAWSSecrets.swift; sourceTree = "<group>"; };
-		AB000101 /* Activity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Activity.swift; sourceTree = "<group>"; };
-		AB000102 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		AB000103 /* ActivityBriefingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBriefingView.swift; sourceTree = "<group>"; };
+		AB000110 /* Taxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Taxonomy.swift; sourceTree = "<group>"; };
+		AB000111 /* SessionTaxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTaxonomy.swift; sourceTree = "<group>"; };
+		AB000112 /* TaxonomyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaxonomyPickerView.swift; sourceTree = "<group>"; };
+		AB000113 /* taxonomy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/taxonomy.json; sourceTree = "<group>"; };
 		AB000104 /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		AB000105 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		AB000087 /* SessionUploadNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUploadNotification.swift; sourceTree = "<group>"; };
@@ -177,6 +181,7 @@
 				AE000008 /* Utils */,
 				AB000070 /* Assets.xcassets */,
 				AB000092 /* Orbitron.ttf */,
+				AB000113 /* taxonomy.json */,
 				BA100002 /* hand_landmarker.task */,
 				AB000080 /* Info.plist */,
 			);
@@ -199,7 +204,8 @@
 				AB000019 /* SessionManifest.swift */,
 				AB000020 /* VideoTimestamp.swift */,
 				AB000045 /* LensDistortionCalibration.swift */,
-				AB000101 /* Activity.swift */,
+				AB000110 /* Taxonomy.swift */,
+				AB000111 /* SessionTaxonomy.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -254,7 +260,7 @@
 				AB000005 /* SettingsView.swift */,
 				AB000006 /* CameraPreviewView.swift */,
 				AB000091 /* KGenEyeHomeView.swift */,
-				AB000102 /* ActivitiesView.swift */,
+				AB000112 /* TaxonomyPickerView.swift */,
 				AB000103 /* ActivityBriefingView.swift */,
 				AB000105 /* LoginView.swift */,
 			);
@@ -385,6 +391,7 @@
 				AA000070 /* Assets.xcassets in Resources */,
 				AA000092 /* Orbitron.ttf in Resources */,
 				BA100001 /* hand_landmarker.task in Resources */,
+				AA000113 /* taxonomy.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -475,8 +482,9 @@
 				AA000085 /* UploadManager.swift in Sources */,
 				AA000086 /* EmbeddedAWSCredentials.swift in Sources */,
 				AA000100 /* EmbeddedAWSSecrets.swift in Sources */,
-				AA000101 /* Activity.swift in Sources */,
-				AA000102 /* ActivitiesView.swift in Sources */,
+				AA000110 /* Taxonomy.swift in Sources */,
+				AA000111 /* SessionTaxonomy.swift in Sources */,
+				AA000112 /* TaxonomyPickerView.swift in Sources */,
 				AA000103 /* ActivityBriefingView.swift in Sources */,
 				AA000104 /* ThumbnailGenerator.swift in Sources */,
 				AA000105 /* LoginView.swift in Sources */,
@@ -629,7 +637,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = EgoCapture/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -657,7 +665,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = EgoCapture/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";

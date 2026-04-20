@@ -1,13 +1,15 @@
 import SwiftUI
 
-/// Intermediate screen between the Activities list and the Recording screen.
+/// Intermediate screen between the taxonomy wizard and the Recording
+/// screen.
 ///
-/// Intentionally kept minimal for now — shows the selected activity title and
-/// a single "Gravar" button that opens `RecordingView` with the activity
-/// pre-bound (its title flows into `environment.taskDescription` of the
-/// session metadata). Descriptions/sample frames will land here later.
+/// Shows a quick recap of the wizard selection (cenário, location, task,
+/// dia/noite auto-detectado) and a single "Gravar" button that hands the
+/// `SessionTaxonomy` off to `RecordingView`. The orchestrator persists
+/// the same struct as `taxonomy.json` next to `metadata.json` at the end
+/// of the recording.
 struct ActivityBriefingView: View {
-    let activity: Activity
+    let selection: SessionTaxonomy
 
     var body: some View {
         ZStack {
@@ -23,13 +25,18 @@ struct ActivityBriefingView: View {
 
             GlassPane {
                 VStack(spacing: 0) {
-                    BriefingHeader(title: activity.title)
+                    BriefingHeader(title: selection.taskCategoryLabelPt)
                         .padding(.top, 4)
+
+                    Spacer(minLength: 12)
+
+                    BriefingSummary(selection: selection)
+                        .padding(.horizontal, 16)
 
                     Spacer()
 
                     NavigationLink {
-                        RecordingView(activity: activity)
+                        RecordingView(taxonomy: selection)
                     } label: {
                         KEPillButton(
                             label: "Gravar",
@@ -88,8 +95,73 @@ private struct BriefingHeader: View {
     }
 }
 
+// MARK: - Summary
+
+private struct BriefingSummary: View {
+    let selection: SessionTaxonomy
+
+    var body: some View {
+        VStack(spacing: 10) {
+            row(icon: selection.scenarioBucket == "indoor" ? "house.fill" : "tree.fill",
+                title: "Cenário",
+                value: selection.scenarioBucket == "indoor" ? "Interno" : "Externo")
+            row(icon: "mappin.and.ellipse",
+                title: "Local",
+                value: selection.locationLabelPt)
+            row(icon: "tag.fill",
+                title: "Atividade",
+                value: selection.taskCategoryLabelPt)
+            row(icon: selection.timeOfDay == "day" ? "sun.max.fill" : "moon.stars.fill",
+                title: "Período",
+                value: selection.timeOfDay == "day" ? "Dia (\(selection.recordingHour)h)" : "Noite (\(selection.recordingHour)h)")
+        }
+    }
+
+    private func row(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(KE.ink2)
+                .frame(width: 20)
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(KE.ink3)
+                .frame(width: 78, alignment: .leading)
+            Text(value)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(KE.ink1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.32))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.45), lineWidth: 1)
+        )
+    }
+}
+
 #Preview {
     NavigationStack {
-        ActivityBriefingView(activity: Activity.catalog.first!)
+        ActivityBriefingView(selection: SessionTaxonomy(
+            schemaVersion: "1.0.0",
+            viewpointCode: "egocentric",
+            scenarioCode: "indoor",
+            scenarioBucket: "indoor",
+            domainCode: "residential",
+            locationCode: "kitchen",
+            locationLabelPt: "Cozinha",
+            locationLabelEn: "Kitchen",
+            taskCategoryCode: "dishwashing",
+            taskCategoryGroup: "housekeeping",
+            taskCategoryLabelPt: "Lavagem de Louça",
+            taskCategoryLabelEn: "Dishwashing",
+            timeOfDay: "day",
+            recordingHour: 14
+        ))
     }
 }

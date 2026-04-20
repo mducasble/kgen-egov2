@@ -24,6 +24,12 @@ final class RecordingOrchestrator: ObservableObject {
     /// metadata (the Lambda already maps that field into the MCAP task block).
     @Published var activityTitle: String?
 
+    /// Optional taxonomy selection coming from the wizard. Persisted as
+    /// `taxonomy.json` next to `metadata.json` (out-of-MCAP annotation).
+    /// When set, the day/night bucket is recomputed at finalize time so
+    /// it reflects the actual recording end timestamp.
+    var taxonomySelection: SessionTaxonomy?
+
     /// The live AVCaptureSession — used by CameraPreviewView for hardware-composited preview.
     @Published var captureSession: AVCaptureSession?
 
@@ -459,6 +465,36 @@ final class RecordingOrchestrator: ObservableObject {
         )
 
         do { try packagingService.writeMetadata(metadata, to: SessionFiles.url("metadata", "json", in: dir)) } catch {}
+
+        // Out-of-MCAP taxonomy annotation. day/night is recomputed against
+        // the actual recording end so the bucket reflects when the user
+        // actually shot the clip rather than when they tapped through the
+        // wizard.
+        if let selection = taxonomySelection {
+            let endDate = Date(timeIntervalSince1970: endEpochMs / 1000.0)
+            let day = SessionTaxonomy.dayOrNight(for: endDate)
+            let snapshot = SessionTaxonomy(
+                schemaVersion: selection.schemaVersion,
+                viewpointCode: selection.viewpointCode,
+                scenarioCode: selection.scenarioCode,
+                scenarioBucket: selection.scenarioBucket,
+                domainCode: selection.domainCode,
+                locationCode: selection.locationCode,
+                locationLabelPt: selection.locationLabelPt,
+                locationLabelEn: selection.locationLabelEn,
+                taskCategoryCode: selection.taskCategoryCode,
+                taskCategoryGroup: selection.taskCategoryGroup,
+                taskCategoryLabelPt: selection.taskCategoryLabelPt,
+                taskCategoryLabelEn: selection.taskCategoryLabelEn,
+                timeOfDay: day.label,
+                recordingHour: day.hour
+            )
+            do {
+                try JSONFileWriter.write(snapshot, to: SessionFiles.url("taxonomy", "json", in: dir))
+            } catch {
+                print("[Orchestrator] Failed to write taxonomy.json: \(error)")
+            }
+        }
 
         let bitrateMbps = Double(videoCaptureService?.targetBitrate ?? 6_000_000) / 1_000_000.0
 
