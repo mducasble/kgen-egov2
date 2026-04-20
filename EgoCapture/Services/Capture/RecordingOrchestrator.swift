@@ -18,6 +18,12 @@ final class RecordingOrchestrator: ObservableObject {
     @Published var imuSampleCount: Int = 0
     @Published var lastError: String?
 
+    /// Optional activity label selected via the Activities → Briefing flow.
+    /// When non-empty, it takes precedence over the Settings `task_description`
+    /// field and is emitted as `environment.taskDescription` in the session
+    /// metadata (the Lambda already maps that field into the MCAP task block).
+    @Published var activityTitle: String?
+
     /// The live AVCaptureSession — used by CameraPreviewView for hardware-composited preview.
     @Published var captureSession: AVCaptureSession?
 
@@ -345,7 +351,11 @@ final class RecordingOrchestrator: ObservableObject {
                 type: ud.string(forKey: "environment_type") ?? "residential",
                 subCategory: ud.string(forKey: "environment_sub") ?? "room_tidy_up",
                 country: ud.string(forKey: "country") ?? "US",
-                taskDescription: { let d = ud.string(forKey: "task_description") ?? ""; return d.isEmpty ? nil : d }()
+                taskDescription: {
+                    if let activity = activityTitle, !activity.isEmpty { return activity }
+                    let d = ud.string(forKey: "task_description") ?? ""
+                    return d.isEmpty ? nil : d
+                }()
             ),
             device: deviceInfo,
             capture: SessionMetadata.CaptureInfo(

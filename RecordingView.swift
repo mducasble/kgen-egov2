@@ -2,11 +2,20 @@ import SwiftUI
 import AVFoundation
 
 struct RecordingView: View {
+    /// Optional activity selected via the Activities → Briefing flow. When
+    /// present, its title is shown in the recording chrome and fed into
+    /// `environment.taskDescription` of the session metadata.
+    let activity: Activity?
+
     @StateObject private var orchestrator = RecordingOrchestrator()
     @StateObject private var idlePreview = IdlePreviewSession()
     @Environment(\.dismiss) private var dismiss
 
     @State private var flashIconOn = false
+
+    init(activity: Activity? = nil) {
+        self.activity = activity
+    }
 
     // FOV diagnostic UI state — disabled by default. Re-enable together with
     // `fovDiagnosticCard` and `runFOVDiagnostic()` below when needed.
@@ -51,6 +60,7 @@ struct RecordingView: View {
         .tint(KE.ink1)
         .onAppear {
             OrientationLock.shared.lock(.landscapeRight)
+            orchestrator.activityTitle = activity?.title
             if !orchestrator.isRecording { idlePreview.start() }
         }
         .onDisappear {
@@ -88,6 +98,22 @@ struct RecordingView: View {
                     .shadow(color: .black.opacity(0.08), radius: 16, y: 8)
 
                 VStack(spacing: 14) {
+                    if let activity = activity {
+                        EGOSidebarCard {
+                            VStack(spacing: 4) {
+                                Text("Activity")
+                                    .font(.caption2.weight(.semibold))
+                                    .tracking(0.5)
+                                    .foregroundStyle(KE.ink3)
+                                Text(activity.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(KE.ink1)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+
                     EGOSidebarCard {
                         VStack(spacing: 6) {
                             statusIndicator
@@ -126,6 +152,12 @@ struct RecordingView: View {
                 EGOCaptureTopPill(title: "REC", showDot: true, dotColor: EGOTheme.recordInner)
 
                 Spacer()
+
+                if let activity = activity {
+                    EGOCaptureTopPill(title: activity.title.uppercased())
+                        .layoutPriority(1)
+                    Spacer()
+                }
 
                 EGOCaptureTopPill(title: formatDurationLong(orchestrator.recordingDurationSec))
             }

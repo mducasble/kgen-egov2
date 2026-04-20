@@ -98,7 +98,7 @@ struct GlassPane<Content: View>: View {
     }
 }
 
-private enum KEButtonVariant {
+enum KEButtonVariant {
     case red, green, blue, ghost
 
     var tint: Color {
@@ -116,7 +116,7 @@ private enum KEButtonVariant {
 /// Intentionally not a `Button` — we let the surrounding `NavigationLink` own
 /// the gesture. Wrapping a Button inside a NavigationLink swallows the tap and
 /// the link never activates.
-private struct KEPillButton: View {
+struct KEPillButton: View {
     let label: String
     let systemImage: String
     var variant: KEButtonVariant = .green
@@ -386,7 +386,7 @@ struct KGenEyeHomeView: View {
 
                         VStack(spacing: 14) {
                             NavigationLink {
-                                RecordingView()
+                                ActivitiesView()
                             } label: {
                                 KEPillButton(
                                     label: "Start Recording",

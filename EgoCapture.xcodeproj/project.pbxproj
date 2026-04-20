@@ -55,6 +55,9 @@
 		AA000085 /* UploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000085 /* UploadManager.swift */; };
 		AA000086 /* EmbeddedAWSCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000086 /* EmbeddedAWSCredentials.swift */; };
 		AA000100 /* EmbeddedAWSSecrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000100 /* EmbeddedAWSSecrets.swift */; };
+		AA000101 /* Activity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000101 /* Activity.swift */; };
+		AA000102 /* ActivitiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000102 /* ActivitiesView.swift */; };
+		AA000103 /* ActivityBriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000103 /* ActivityBriefingView.swift */; };
 		AA000087 /* SessionUploadNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000087 /* SessionUploadNotification.swift */; };
 		AA000089 /* CampaignConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000089 /* CampaignConfig.swift */; };
 		AA000090 /* EGOTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000090 /* EGOTheme.swift */; };
@@ -114,6 +117,9 @@
 		AB000085 /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
 		AB000086 /* EmbeddedAWSCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedAWSCredentials.swift; sourceTree = "<group>"; };
 		AB000100 /* EmbeddedAWSSecrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedAWSSecrets.swift; sourceTree = "<group>"; };
+		AB000101 /* Activity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Activity.swift; sourceTree = "<group>"; };
+		AB000102 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
+		AB000103 /* ActivityBriefingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBriefingView.swift; sourceTree = "<group>"; };
 		AB000087 /* SessionUploadNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUploadNotification.swift; sourceTree = "<group>"; };
 		AB000088 /* S3Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3Config.swift; sourceTree = "<group>"; };
 		AB000089 /* CampaignConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignConfig.swift; sourceTree = "<group>"; };
@@ -189,6 +195,7 @@
 				AB000019 /* SessionManifest.swift */,
 				AB000020 /* VideoTimestamp.swift */,
 				AB000045 /* LensDistortionCalibration.swift */,
+				AB000101 /* Activity.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -243,6 +250,8 @@
 				AB000005 /* SettingsView.swift */,
 				AB000006 /* CameraPreviewView.swift */,
 				AB000091 /* KGenEyeHomeView.swift */,
+				AB000102 /* ActivitiesView.swift */,
+				AB000103 /* ActivityBriefingView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -460,6 +469,9 @@
 				AA000085 /* UploadManager.swift in Sources */,
 				AA000086 /* EmbeddedAWSCredentials.swift in Sources */,
 				AA000100 /* EmbeddedAWSSecrets.swift in Sources */,
+				AA000101 /* Activity.swift in Sources */,
+				AA000102 /* ActivitiesView.swift in Sources */,
+				AA000103 /* ActivityBriefingView.swift in Sources */,
 				AA000089 /* CampaignConfig.swift in Sources */,
 				AA000087 /* SessionUploadNotification.swift in Sources */,
 				AA000010 /* IMUSample.swift in Sources */,
