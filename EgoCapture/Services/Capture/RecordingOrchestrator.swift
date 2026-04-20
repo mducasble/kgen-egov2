@@ -489,6 +489,15 @@ final class RecordingOrchestrator: ObservableObject {
         do { try JSONFileWriter.write(techVal, to: SessionFiles.url("technical_validation", "json", in: dir)) } catch {}
 
         do { try packagingService.writeManifest(sessionId: sessionId, sessionDir: dir) } catch {}
+
+        // Kick off thumbnail extraction so the Sessions screen shows a real
+        // frame immediately on the user's next visit. Detached + low-priority
+        // so we don't compete with the IMU flush / upload kickoff.
+        let thumbDir = dir
+        Task.detached(priority: .utility) {
+            await ThumbnailGenerator.generateIfNeeded(in: thumbDir)
+        }
+
         cleanup()
     }
 

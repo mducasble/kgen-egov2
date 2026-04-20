@@ -58,6 +58,7 @@
 		AA000101 /* Activity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000101 /* Activity.swift */; };
 		AA000102 /* ActivitiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000102 /* ActivitiesView.swift */; };
 		AA000103 /* ActivityBriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000103 /* ActivityBriefingView.swift */; };
+		AA000104 /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000104 /* ThumbnailGenerator.swift */; };
 		AA000087 /* SessionUploadNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000087 /* SessionUploadNotification.swift */; };
 		AA000089 /* CampaignConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000089 /* CampaignConfig.swift */; };
 		AA000090 /* EGOTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000090 /* EGOTheme.swift */; };
@@ -120,6 +121,7 @@
 		AB000101 /* Activity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Activity.swift; sourceTree = "<group>"; };
 		AB000102 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		AB000103 /* ActivityBriefingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBriefingView.swift; sourceTree = "<group>"; };
+		AB000104 /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		AB000087 /* SessionUploadNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUploadNotification.swift; sourceTree = "<group>"; };
 		AB000088 /* S3Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S3Config.swift; sourceTree = "<group>"; };
 		AB000089 /* CampaignConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignConfig.swift; sourceTree = "<group>"; };
@@ -270,6 +272,7 @@
 			isa = PBXGroup;
 			children = (
 				AB000050 /* SessionPackagingService.swift */,
+				AB000104 /* ThumbnailGenerator.swift */,
 			);
 			path = Packaging;
 			sourceTree = "<group>";
@@ -472,6 +475,7 @@
 				AA000101 /* Activity.swift in Sources */,
 				AA000102 /* ActivitiesView.swift in Sources */,
 				AA000103 /* ActivityBriefingView.swift in Sources */,
+				AA000104 /* ThumbnailGenerator.swift in Sources */,
 				AA000089 /* CampaignConfig.swift in Sources */,
 				AA000087 /* SessionUploadNotification.swift in Sources */,
 				AA000010 /* IMUSample.swift in Sources */,

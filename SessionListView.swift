@@ -1,197 +1,511 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Session list
+
 struct SessionListView: View {
     @State private var sessions: [(id: String, directory: URL, date: Date)] = []
     @ObservedObject private var uploadManager = UploadManager.shared
 
     var body: some View {
         ZStack {
-            darkBackground
+            AmbientImageBackdrop()
 
-            if sessions.isEmpty {
-                emptyState
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 10) {
-                        ForEach(sessions, id: \.id) { session in
-                            NavigationLink {
-                                SessionDetailView(sessionId: session.id, directory: session.directory)
-                            } label: {
-                                sessionRow(session)
-                            }
-                            .contextMenu {
-                                if let state = uploadManager.activeUploads[session.id], state.hasFailures {
-                                    Button {
-                                        uploadManager.retryUpload(sessionId: session.id)
+            AmbientImageBackdrop()
+                .blur(radius: 12)
+                .mask(
+                    RoundedRectangle(cornerRadius: 36, style: .continuous)
+                        .padding(EdgeInsets(top: 24, leading: 22, bottom: 28, trailing: 22))
+                )
+                .allowsHitTesting(false)
+
+            GlassPane {
+                VStack(spacing: 0) {
+                    SessionsHeader()
+                        .padding(.top, 4)
+
+                    if sessions.isEmpty {
+                        emptyState
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: 10) {
+                                ForEach(sessions, id: \.id) { session in
+                                    NavigationLink {
+                                        SessionDetailView(
+                                            sessionId: session.id,
+                                            directory: session.directory
+                                        )
                                     } label: {
-                                        Label("Retry Upload", systemImage: "arrow.clockwise")
+                                        SessionRow(session: session)
                                     }
-                                }
+                                    .buttonStyle(.plain)
+                                    .contextMenu {
+                                        if let state = uploadManager.activeUploads[session.id], state.hasFailures {
+                                            Button {
+                                                uploadManager.retryUpload(sessionId: session.id)
+                                            } label: {
+                                                Label("Retry Upload", systemImage: "arrow.clockwise")
+                                            }
+                                        }
 
-                                let isUploading = uploadManager.activeUploads[session.id]?.status == .uploading
-                                    || uploadManager.activeUploads[session.id]?.status == .chunking
-                                Button(role: .destructive) {
-                                    withAnimation {
-                                        try? SessionManager.shared.deleteSession(id: session.id)
-                                        sessions = SessionManager.shared.listSessions()
+                                        let isUploading = uploadManager.activeUploads[session.id]?.status == .uploading
+                                            || uploadManager.activeUploads[session.id]?.status == .chunking
+                                        Button(role: .destructive) {
+                                            withAnimation {
+                                                try? SessionManager.shared.deleteSession(id: session.id)
+                                                sessions = SessionManager.shared.listSessions()
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        .disabled(isUploading)
                                     }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
                                 }
-                                .disabled(isUploading)
                             }
+                            .padding(.top, 24)
+                            .padding(.bottom, 20)
+                        }
+                        .scrollIndicators(.hidden)
+                        .refreshable {
+                            sessions = SessionManager.shared.listSessions()
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
                 }
-                .refreshable {
-                    sessions = SessionManager.shared.listSessions()
-                }
+                .padding(.horizontal, 16)
             }
         }
-        .navigationTitle("Sessions")
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationBarHidden(true)
         .preferredColorScheme(.light)
         .onAppear {
             sessions = SessionManager.shared.listSessions()
         }
     }
 
-    private var darkBackground: some View {
-        AmbientImageBackdrop()
-    }
-
     private var emptyState: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "folder.badge.questionmark")
-                .font(.system(size: 44, weight: .light))
+        VStack(spacing: 8) {
+            Spacer()
+            Image(systemName: "square.stack.3d.up.slash")
+                .font(.system(size: 36, weight: .light))
                 .foregroundStyle(KE.ink3)
+            Text("No recordings yet")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(KE.ink1)
+                .padding(.top, 10)
+            Text("Tap Start on Home to capture your first session.")
+                .font(.system(size: 13))
+                .foregroundStyle(KE.ink2)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
+            Spacer()
+        }
+    }
+}
 
-            Text("No Sessions")
-                .font(.title3.weight(.semibold))
+// MARK: - Header
+
+private struct SessionsHeader: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Text("Sessions")
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(KE.ink1)
 
-            Text("Recorded sessions will appear here")
-                .font(.subheadline)
-                .foregroundStyle(KE.ink2)
-        }
-    }
-
-    private func sessionRow(_ session: (id: String, directory: URL, date: Date)) -> some View {
-        GlassCard {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [KE.accentBlue.opacity(0.55), KE.accentGreen.opacity(0.45)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+            HStack {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(KE.ink1)
                         .frame(width: 44, height: 44)
-
-                    Image(systemName: "waveform.path.ecg.rectangle")
-                        .font(.title3)
-                        .foregroundStyle(KE.ink1)
+                        .background(Circle().fill(.ultraThinMaterial))
+                        .overlay(
+                            Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1.2)
+                        )
+                        .shadow(
+                            color: Color(red: 30/255, green: 40/255, blue: 55/255).opacity(0.12),
+                            radius: 8, x: 0, y: 4
+                        )
                 }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(session.id)
-                        .font(.subheadline.monospaced().weight(.semibold))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .foregroundStyle(KE.ink1)
-
-                    HStack(spacing: 8) {
-                        Text(formatDate(session.date))
-                            .font(.caption)
-                            .foregroundStyle(KE.ink2)
-
-                        Text("·")
-                            .foregroundStyle(KE.ink3)
-
-                        Text(formatSize(SessionManager.shared.sessionSize(id: session.id)))
-                            .font(.caption)
-                            .foregroundStyle(KE.ink2)
-                    }
-
-                    uploadBadge(for: session.id)
-                }
+                .buttonStyle(.plain)
 
                 Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(KE.ink3)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
         }
+        .padding(.top, 20)
     }
+}
 
-    private func formatDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f.string(from: date)
-    }
+// MARK: - Row
 
-    @ViewBuilder
-    private func uploadBadge(for sessionId: String) -> some View {
-        let state = uploadManager.activeUploads[sessionId] ?? uploadManager.loadState(sessionId: sessionId)
+private struct SessionRow: View {
+    let session: (id: String, directory: URL, date: Date)
+    @ObservedObject private var uploadManager = UploadManager.shared
+    @State private var enrichment: SessionEnrichment = .placeholder
 
-        if let state {
-            HStack(spacing: 5) {
-                switch state.status {
-                case .chunking:
-                    ProgressView()
-                        .scaleEffect(0.6)
-                        .tint(.orange)
-                    Text("Preparing...")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.orange)
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            SessionThumbnail(
+                image: enrichment.thumbnail,
+                paletteIndex: SessionPalette.index(for: session.id),
+                durationSec: enrichment.durationSec
+            )
 
-                case .uploading:
-                    ProgressView()
-                        .scaleEffect(0.6)
-                        .tint(KE.accentBlue)
-                    Text("\(state.completedFiles)/\(state.totalFiles)")
-                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(KE.accentBlue)
-                    Text("uploading")
-                        .font(.system(size: 10))
-                        .foregroundStyle(KE.ink3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(enrichment.activityLabel)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(KE.ink1)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
-                case .completed:
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(KE.accentGreen)
-                    Text("Uploaded")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(KE.accentGreen)
+                Text("\(SessionRow.dateFormatter.string(from: session.date)) · \(formatSize(enrichment.sizeBytes))")
+                    .font(.system(size: 12))
+                    .foregroundStyle(KE.ink2)
 
-                case .failed, .partiallyFailed:
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(KE.accentRed)
-                    Text("\(state.failedFiles) failed")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(KE.accentRed)
-                    Text("· hold to retry")
-                        .font(.system(size: 9))
-                        .foregroundStyle(KE.ink3)
+                HStack(spacing: 8) {
+                    Text("\(formatDuration(enrichment.durationSec)) · \(shortId(session.id))")
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                        .foregroundStyle(KE.ink1.opacity(0.75))
+
+                    Text("·")
+                        .font(.system(size: 11))
+                        .foregroundStyle(KE.ink3.opacity(0.6))
+
+                    SessionUploadBadge(state: currentUploadState)
                 }
+                .padding(.top, 4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(KE.ink1.opacity(0.5))
+        }
+        .padding(12)
+        .background(
+            Color(red: 240/255, green: 246/255, blue: 254/255).opacity(0.30)
+        )
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(
+                    Color(red: 210/255, green: 222/255, blue: 238/255).opacity(0.55),
+                    lineWidth: 1
+                )
+        )
+        .shadow(
+            color: Color(red: 40/255, green: 55/255, blue: 80/255).opacity(0.14),
+            radius: 16, x: 0, y: 8
+        )
+        .task(id: session.id) {
+            await loadEnrichment()
+        }
+    }
+
+    // MARK: Helpers
+
+    private var currentUploadState: UploadState? {
+        uploadManager.activeUploads[session.id] ?? uploadManager.loadState(sessionId: session.id)
+    }
+
+    private func loadEnrichment() async {
+        // Read the quick-win pieces synchronously off the main actor.
+        let sync = await Task.detached(priority: .userInitiated) {
+            SessionEnrichment.loadFromDisk(
+                id: session.id,
+                directory: session.directory
+            )
+        }.value
+        enrichment = sync
+
+        // Then backfill a real thumbnail if the cache was empty. The JPEG is
+        // tiny, so decoding + writing happens fast; we re-apply to state so
+        // the gradient placeholder animates into the real frame.
+        if sync.thumbnail == nil {
+            if let img = await ThumbnailGenerator.generateIfNeeded(in: session.directory) {
+                await MainActor.run { enrichment.thumbnail = img }
             }
         }
+    }
+
+    private func shortId(_ id: String) -> String {
+        id.count > 12 ? String(id.prefix(12)) : id
     }
 
     private func formatSize(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds > 0 else { return "--:--" }
+        let total = Int(seconds.rounded())
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM yyyy 'at' HH:mm"
+        return f
+    }()
+}
+
+// MARK: - Thumbnail
+
+private struct SessionThumbnail: View {
+    let image: UIImage?
+    let paletteIndex: Int
+    let durationSec: Double
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            ZStack {
+                if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    LinearGradient(
+                        colors: SessionPalette.gradient(for: paletteIndex),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+
+                LinearGradient(
+                    colors: [
+                        .white.opacity(0.18),
+                        .clear,
+                        .black.opacity(0.15)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+
+                Circle()
+                    .fill(Color.white.opacity(0.85))
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(KE.ink1)
+                            .offset(x: 1)
+                    )
+                    .shadow(color: .black.opacity(0.25), radius: 3, y: 2)
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.35), lineWidth: 1)
+            )
+            .shadow(color: Color(red: 30/255, green: 45/255, blue: 65/255).opacity(0.22),
+                    radius: 10, x: 0, y: 3)
+
+            if durationSec.isFinite, durationSec > 0 {
+                Text(durationLabel)
+                    .font(.system(size: 9, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(
+                        Color(red: 20/255, green: 30/255, blue: 45/255).opacity(0.72)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .padding(4)
+            }
+        }
+    }
+
+    private var durationLabel: String {
+        let total = Int(durationSec.rounded())
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+}
+
+// MARK: - Upload badge
+
+private struct SessionUploadBadge: View {
+    let state: UploadState?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            switch state?.status {
+            case .completed:
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(KE.accentGreen)
+                Text("Uploaded")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color(red: 70/255, green: 140/255, blue: 100/255))
+
+            case .uploading:
+                UploadProgressRing(progress: uploadProgress)
+                Text("Uploading \(Int((uploadProgress * 100).rounded()))%")
+                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                    .foregroundStyle(KE.accentBlue)
+
+            case .chunking:
+                UploadProgressRing(progress: nil)
+                Text("Preparing")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(KE.accentBlue)
+
+            case .failed, .partiallyFailed:
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(KE.accentRed)
+                Text("Failed · hold to retry")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(KE.accentRed)
+
+            case nil:
+                Image(systemName: "icloud.and.arrow.up")
+                    .font(.system(size: 11))
+                    .foregroundStyle(KE.ink2)
+                Text("Pending")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(KE.ink2)
+            }
+        }
+    }
+
+    private var uploadProgress: Double {
+        guard let state = state, state.totalFiles > 0 else { return 0 }
+        return min(1, max(0, Double(state.completedFiles) / Double(state.totalFiles)))
+    }
+}
+
+private struct UploadProgressRing: View {
+    /// `nil` → indeterminate (chunking).
+    let progress: Double?
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(KE.accentBlue.opacity(0.25), lineWidth: 2)
+                .frame(width: 14, height: 14)
+
+            if let progress = progress {
+                Circle()
+                    .trim(from: 0, to: CGFloat(progress))
+                    .stroke(
+                        KE.accentBlue,
+                        style: StrokeStyle(lineWidth: 2, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 14, height: 14)
+                    .animation(.easeOut(duration: 0.2), value: progress)
+            } else {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .scaleEffect(0.55)
+                    .tint(KE.accentBlue)
+            }
+        }
+        .frame(width: 14, height: 14)
+    }
+}
+
+// MARK: - Enrichment
+
+/// Cheap per-row data loaded off the main actor.
+/// Activity label falls back to the environment sub-category (formatted) when
+/// no `taskDescription` is present (sessions recorded before the Activities
+/// feature landed), so the row always shows something human-readable.
+private struct SessionEnrichment {
+    var activityLabel: String
+    var sizeBytes: Int64
+    var durationSec: Double
+    var thumbnail: UIImage?
+
+    static let placeholder = SessionEnrichment(
+        activityLabel: "Session",
+        sizeBytes: 0,
+        durationSec: 0,
+        thumbnail: nil
+    )
+
+    static func loadFromDisk(id: String, directory: URL) -> SessionEnrichment {
+        let size = SessionManager.shared.sessionSize(id: id)
+        let thumb = ThumbnailGenerator.cachedImage(in: directory)
+
+        var label = "Session"
+        var duration: Double = 0
+
+        if let url = SessionFiles.resolveExisting("metadata", "json", in: directory),
+           let data = try? Data(contentsOf: url),
+           let metadata = try? JSONDecoder().decode(SessionMetadata.self, from: data) {
+            duration = metadata.durationSec
+            if let task = metadata.environment.taskDescription?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !task.isEmpty {
+                label = task
+            } else {
+                label = humanizeSubCategory(metadata.environment.subCategory)
+            }
+        }
+
+        return SessionEnrichment(
+            activityLabel: label,
+            sizeBytes: size,
+            durationSec: duration,
+            thumbnail: thumb
+        )
+    }
+
+    /// `"room_tidy_up"` → `"Room Tidy Up"`. Keeps underscores-as-spaces logic
+    /// local so we don't import a localization dependency just for display.
+    private static func humanizeSubCategory(_ raw: String) -> String {
+        raw
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
+    }
+}
+
+// MARK: - Palette
+
+/// 5-palette cycle used as the fallback thumbnail background while the JPEG
+/// is being generated (or when the source video is missing). The hash maps
+/// each session to a stable slot so the list doesn't shimmer on refresh.
+private enum SessionPalette {
+    static func index(for id: String) -> Int {
+        let hash = id.unicodeScalars.reduce(0) { ($0 &* 31) &+ Int($1.value) }
+        return abs(hash) % palettes.count
+    }
+
+    static func gradient(for index: Int) -> [Color] {
+        palettes[index % palettes.count]
+    }
+
+    private static let palettes: [[Color]] = [
+        [
+            Color(red: 107/255, green: 166/255, blue: 142/255),
+            Color(red: 140/255, green: 175/255, blue: 210/255),
+            Color(red: 199/255, green: 214/255, blue: 229/255)
+        ],
+        [
+            Color(red: 227/255, green: 201/255, blue: 154/255),
+            Color(red: 168/255, green: 181/255, blue: 194/255),
+            Color(red: 111/255, green: 133/255, blue: 160/255)
+        ],
+        [
+            Color(red: 181/255, green: 168/255, blue: 201/255),
+            Color(red: 125/255, green: 143/255, blue: 179/255),
+            Color(red:  76/255, green:  95/255, blue: 130/255)
+        ],
+        [
+            Color(red: 212/255, green: 160/255, blue: 122/255),
+            Color(red: 138/255, green: 155/255, blue: 176/255),
+            Color(red:  68/255, green:  90/255, blue: 120/255)
+        ],
+        [
+            Color(red: 122/255, green: 168/255, blue: 154/255),
+            Color(red: 140/255, green: 175/255, blue: 210/255),
+            Color(red:  74/255, green:  99/255, blue: 128/255)
+        ]
+    ]
 }
 
 // MARK: - Session Detail
@@ -208,41 +522,52 @@ struct SessionDetailView: View {
         ZStack {
             AmbientImageBackdrop()
 
-            ScrollView {
-                VStack(spacing: 14) {
-                    GlassCard {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("SESSION ID")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(KE.ink3)
-                                .tracking(0.8)
+            AmbientImageBackdrop()
+                .blur(radius: 12)
+                .mask(
+                    RoundedRectangle(cornerRadius: 36, style: .continuous)
+                        .padding(EdgeInsets(top: 24, leading: 22, bottom: 28, trailing: 22))
+                )
+                .allowsHitTesting(false)
 
-                            Text(sessionId)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(KE.ink1)
-                                .textSelection(.enabled)
+            GlassPane {
+                ScrollView {
+                    VStack(spacing: 14) {
+                        GlassCard {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("SESSION ID")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(KE.ink3)
+                                    .tracking(0.8)
+
+                                Text(sessionId)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(KE.ink1)
+                                    .textSelection(.enabled)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                    }
 
-                    VStack(spacing: 8) {
-                        ForEach(files, id: \.name) { file in
-                            if isReadableJSONFile(file.name) {
-                                NavigationLink {
-                                    JSONArtifactView(fileURL: file.url)
-                                } label: {
-                                    artifactRow(file: file, tappable: true)
+                        VStack(spacing: 8) {
+                            ForEach(files, id: \.name) { file in
+                                if isReadableJSONFile(file.name) {
+                                    NavigationLink {
+                                        JSONArtifactView(fileURL: file.url)
+                                    } label: {
+                                        artifactRow(file: file, tappable: true)
+                                    }
+                                } else {
+                                    artifactRow(file: file, tappable: false)
                                 }
-                            } else {
-                                artifactRow(file: file, tappable: false)
                             }
                         }
                     }
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
+                .scrollIndicators(.hidden)
+                .padding(.horizontal, 10)
             }
         }
         .navigationTitle("Session")
@@ -383,19 +708,46 @@ struct JSONArtifactView: View {
         ZStack {
             AmbientImageBackdrop()
 
-            Group {
-                if let loadError {
-                    ContentUnavailableView("Unable to open file", systemImage: "exclamationmark.triangle", description: Text(loadError))
-                } else {
-                    ScrollView {
-                        Text(textContent)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(KE.ink1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
-                            .padding()
+            AmbientImageBackdrop()
+                .blur(radius: 12)
+                .mask(
+                    RoundedRectangle(cornerRadius: 36, style: .continuous)
+                        .padding(EdgeInsets(top: 24, leading: 22, bottom: 28, trailing: 22))
+                )
+                .allowsHitTesting(false)
+
+            GlassPane {
+                Group {
+                    if let loadError {
+                        VStack(spacing: 10) {
+                            Spacer()
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 34, weight: .light))
+                                .foregroundStyle(KE.ink2)
+                            Text("Unable to open file")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(KE.ink1)
+                            Text(loadError)
+                                .font(.system(size: 13))
+                                .foregroundStyle(KE.ink3)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            Text(textContent)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(KE.ink1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
+                                .padding(.vertical, 14)
+                        }
+                        .scrollIndicators(.hidden)
                     }
                 }
+                .padding(.horizontal, 14)
             }
         }
         .navigationTitle(fileURL.lastPathComponent)
