@@ -117,7 +117,7 @@ enum KEButtonVariant {
 /// the gesture. Wrapping a Button inside a NavigationLink swallows the tap and
 /// the link never activates.
 struct KEPillButton: View {
-    let label: String
+    let label: LocalizedStringKey
     let systemImage: String
     var variant: KEButtonVariant = .green
 
@@ -231,15 +231,37 @@ private struct KEPillSurface<S: InsettableShape>: ViewModifier {
 
 // MARK: - Brand lockup
 
+/// KGeN Eye mark at the top of the Home pane. The brand SVG already carries
+/// its own "glass" language (the two translucent bracket shapes flanking the
+/// green diamond use `glassBody`/`glassHighlight`/`glassShade` gradients), so
+/// we render the artwork at full fidelity and add only a soft drop shadow
+/// for depth. Wrapping it in a `.glassEffect(..., in: Circle())` was tried
+/// and explicitly rejected — it produced a visible disc around the glyph.
+struct GlassLogoBadge: View {
+    /// ~2× the original inline size: 108 → 184 (+70%) → 221 (+20%). Kept as
+    /// a constant so a future asset swap can tweak it in one place.
+    private let artworkSize: CGFloat = 221
+
+    var body: some View {
+        Image("kgen-eye-logo")
+            .resizable()
+            .scaledToFit()
+            .frame(width: artworkSize, height: artworkSize)
+            .shadow(color: Color(red: 40/255, green: 55/255, blue: 80/255).opacity(0.22),
+                    radius: 18, x: 0, y: 8)
+            .accessibilityHidden(true)
+    }
+}
+
 struct BrandLockup: View {
     var body: some View {
         VStack(spacing: 6) {
-            Text("KGeN© EYE")
+            Text(verbatim: "KGeN© EYE")
                 .font(KE.brand(23, weight: .bold))
                 .tracking(2.4)
                 .foregroundStyle(KE.ink1)
             Text("EGOCENTRIC YIELD ENGINE")
-                .font(KE.brand(16, weight: .medium))
+                .font(KE.brand(14, weight: .medium))
                 .tracking(2.0)
                 .foregroundStyle(KE.ink2)
         }
@@ -380,7 +402,9 @@ struct KGenEyeHomeView: View {
     private var homePane: some View {
         GlassPane {
                     VStack(spacing: 0) {
-                        Spacer().frame(height: 78)
+                        Spacer().frame(height: 36)
+                        GlassLogoBadge()
+                        Spacer().frame(height: 18)
                         BrandLockup()
                         Spacer(minLength: 24)
 

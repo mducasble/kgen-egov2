@@ -103,6 +103,9 @@ final class SessionPackagingService {
             case "taxonomy.json":
                 type = "json"
                 description = "Taxonomy selection (viewpoint, scenario, location, task) plus auto-detected day/night. Out-of-MCAP annotation."
+            case "imu_intrinsics.json":
+                type = "json"
+                description = ImuIntrinsics.manifestArtifactDescription
             case "hand_tracking_comparison.json":
                 type = "json"
                 description = "Comparison summary between Apple Vision and MediaPipe hand tracking"

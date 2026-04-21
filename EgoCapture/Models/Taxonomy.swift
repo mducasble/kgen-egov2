@@ -163,6 +163,17 @@ extension Taxonomy {
             }
         }
 
+        /// Localized label resolved via the current UI locale. Prefer this over
+        /// ``labelPt`` in any on-screen context — ``labelPt`` is kept for JSON
+        /// serialization compatibility (downstream pipeline still expects the
+        /// Portuguese name as the canonical wizard label).
+        var localizedLabel: String {
+            switch self {
+            case .indoor: return String(localized: "Indoor")
+            case .outdoor: return String(localized: "Outdoor")
+            }
+        }
+
         var iconName: String {
             switch self {
             case .indoor: return "house.fill"

@@ -10,7 +10,7 @@ struct ScenarioPickerView: View {
     private let taxonomy = TaxonomyLoader.shared
 
     var body: some View {
-        WizardScaffold(title: "Cenário", step: 1, totalSteps: 3) {
+        WizardScaffold(title: String(localized: "Scenario"), step: 1, totalSteps: 3) {
             VStack(spacing: 12) {
                 ForEach(Taxonomy.BinaryScenario.allCases) { bucket in
                     NavigationLink {
@@ -48,12 +48,12 @@ private struct ScenarioCard: View {
                 )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(bucket.labelPt)
+                Text(bucket.localizedLabel)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(KE.ink1)
                 Text(bucket == .indoor
-                     ? "Cozinha, sala, quarto, banheiro, escritório, áreas fechadas"
-                     : "Quintal, jardim, varanda, rua, parque, transporte aberto")
+                     ? "Kitchen, living room, bedroom, bathroom, office, enclosed areas"
+                     : "Backyard, garden, balcony, street, park, open transport")
                     .font(.system(size: 13))
                     .foregroundStyle(KE.ink2)
                     .lineSpacing(2)
@@ -82,7 +82,7 @@ struct LocationPickerView: View {
     }
 
     var body: some View {
-        WizardScaffold(title: scenarioBucket.labelPt, step: 2, totalSteps: 3) {
+        WizardScaffold(title: scenarioBucket.localizedLabel, step: 2, totalSteps: 3) {
             ScrollView {
                 VStack(spacing: 10) {
                     ForEach(locations) { location in
@@ -100,7 +100,7 @@ struct LocationPickerView: View {
                         .buttonStyle(.plain)
                     }
                     if locations.isEmpty {
-                        EmptyStateLabel("Sem locais disponíveis para este cenário")
+                        EmptyStateLabel("No locations available for this scenario")
                     }
                 }
                 .padding(.vertical, 16)
@@ -132,7 +132,7 @@ struct TaskCategoryPickerView: View {
     }
 
     var body: some View {
-        WizardScaffold(title: "Atividade", step: 3, totalSteps: 3) {
+        WizardScaffold(title: String(localized: "Activity"), step: 3, totalSteps: 3) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     ContextHeader(
@@ -202,20 +202,27 @@ struct TaskCategoryPickerView: View {
     }
 
     private func prettyGroup(_ raw: String) -> String {
-        let map: [String: String] = [
-            "housekeeping": "DOMÉSTICO",
-            "food": "ALIMENTAÇÃO",
-            "self_care": "CUIDADO PESSOAL",
-            "caregiving": "CUIDADO COM OUTROS",
-            "outdoor_work": "TRABALHO EXTERNO",
-            "handiwork": "TRABALHO MANUAL",
-            "errands": "TAREFAS",
-            "mobility": "DESLOCAMENTO",
-            "social": "SOCIAL",
-            "productive": "PRODUTIVO",
-            "recreation": "RECREAÇÃO"
-        ]
-        return map[raw] ?? raw.replacingOccurrences(of: "_", with: " ").uppercased()
+        // Map taxonomy group codes to catalog keys. Falls back to an
+        // uppercased version of the raw code if the group isn't in the
+        // catalog yet — keeps the UI readable when a new group lands in
+        // taxonomy.json before the translators catch up.
+        let key: String.LocalizationValue
+        switch raw {
+        case "housekeeping":  key = "group.housekeeping"
+        case "food":          key = "group.food"
+        case "self_care":     key = "group.self_care"
+        case "caregiving":    key = "group.caregiving"
+        case "outdoor_work":  key = "group.outdoor_work"
+        case "handiwork":     key = "group.handiwork"
+        case "errands":       key = "group.errands"
+        case "mobility":      key = "group.mobility"
+        case "social":        key = "group.social"
+        case "productive":    key = "group.productive"
+        case "recreation":    key = "group.recreation"
+        default:
+            return raw.replacingOccurrences(of: "_", with: " ").uppercased()
+        }
+        return String(localized: key)
     }
 }
 
@@ -267,7 +274,7 @@ private struct WizardHeader: View {
                     .foregroundStyle(KE.ink1)
                     .lineLimit(1)
                     .padding(.horizontal, 56)
-                Text("Passo \(step) de \(totalSteps)")
+                Text("Step \(step) of \(totalSteps)")
                     .font(.system(size: 11, weight: .medium))
                     .tracking(0.6)
                     .foregroundStyle(KE.ink3)
@@ -360,7 +367,7 @@ private struct ContextHeader: View {
             Image(systemName: scenarioBucket.iconName)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(KE.ink2)
-            Text("\(scenarioBucket.labelPt) · \(location.labelPt)")
+            Text(verbatim: "\(scenarioBucket.localizedLabel) · \(location.labelPt)")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(KE.ink2)
             Spacer()
@@ -375,8 +382,8 @@ private struct ContextHeader: View {
 }
 
 private struct EmptyStateLabel: View {
-    let text: String
-    init(_ text: String) { self.text = text }
+    let text: LocalizedStringKey
+    init(_ text: LocalizedStringKey) { self.text = text }
     var body: some View {
         Text(text)
             .font(.subheadline)

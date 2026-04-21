@@ -115,7 +115,7 @@ struct LoginView: View {
 // MARK: - Glass input field
 
 private struct GlassField: View {
-    let placeholder: String
+    let placeholder: LocalizedStringKey
     @Binding var text: String
     let contentType: UITextContentType?
     let keyboardType: UIKeyboardType

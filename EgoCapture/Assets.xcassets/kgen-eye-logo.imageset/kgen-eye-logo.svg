@@ -1,59 +1,59 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1106.57 966.05" width="1106.57" height="966.05">
+  <defs>
+    
+    <linearGradient id="greenBody" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#C8F09E"></stop>
+      <stop offset="0.5" stop-color="#8FD67A"></stop>
+      <stop offset="1" stop-color="#5FB862"></stop>
+    </linearGradient>
+    <linearGradient id="greenHighlight" x1="0.35" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"></stop>
+      <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0.12"></stop>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="greenShade" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#1F5A2C" stop-opacity="0"></stop>
+      <stop offset="0.65" stop-color="#1F5A2C" stop-opacity="0"></stop>
+      <stop offset="1" stop-color="#1F5A2C" stop-opacity="0.35"></stop>
+    </linearGradient>
 
-<svg
-   version="1.1"
-   id="svg1"
-   width="747.82666"
-   height="449.22668"
-   viewBox="0 0 747.82666 449.22668"
-   sodipodi:docname="logo beta kgen eye22.eps"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <defs
-     id="defs1" />
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1">
-    <inkscape:page
-       x="0"
-       y="0"
-       inkscape:label="1"
-       id="page1"
-       width="747.82666"
-       height="449.22668"
-       margin="0"
-       bleed="0" />
-  </sodipodi:namedview>
-  <g
-     id="g1"
-     inkscape:groupmode="layer"
-     inkscape:label="1">
-    <g
-       id="group-R5">
-      <path
-         id="path2"
-         d="M 4234.79,3369.25 2956.01,2038.11 1675.35,3369.25 c -62.81,-73 -269.81,-271.69 -269.81,-271.69 l 1385.5,-1385.5 V 0 h 159.9 10.14 159.91 v 1712.06 l 1385.49,1385.5 c 0,0 -283.28,260.1 -271.69,271.69"
-         style="fill:#1b2c31;fill-opacity:1;fill-rule:nonzero;stroke:none"
-         transform="matrix(0.13333333,0,0,-0.13333333,0,449.22667)" />
-      <path
-         id="path3"
-         d="M 1559.41,2686.12 1431.87,2836.84 892.746,2610.76 0,1712.06 886.949,744.102 c 0,0 776.811,-486.954 1628.971,-486.954 v 539.133 c 0,0 -840.57,411.589 -498.54,1350.709 l -278.26,324.64 c 0,0 -631.88,-846.37 197.1,-1739.118 0,0 -361.35,90.82 -427.05,148.789 -65.7,57.969 -173.91,405.789 -173.91,405.789 l -251.21,-3.86 c 0,0 50.24,-189.37 81.16,-243.48 0,0 -436.714,309.18 -548.788,471.5 h 684.048 c 0,0 -23.19,251.2 -15.46,347.82 H 604.824 c 0,0 405.796,413.52 502.416,444.44 0,0 -30.92,-146.86 -23.19,-193.23 h 224.15 c 0,0 34.78,363.28 251.21,575.84"
-         style="fill:#1b2c31;fill-opacity:1;fill-rule:nonzero;stroke:none"
-         transform="matrix(0.13333333,0,0,-0.13333333,0,449.22667)" />
-      <path
-         id="path4"
-         d="m 3889.82,2158.59 616.66,678.25 507.97,-231.88 594.2,-594.2 -503.38,-0.97 c 0,0 -264.73,341.06 -502.41,436.72 l -249.27,-247.35 c 0,0 57.97,-284.05 52.17,-336.22 h 446.38 v -342.03 h -446.38 c 0,0 -168.11,-684.051 -411.59,-794.199 0,0 713.04,133.328 1060.86,550.719 H 5518.8 L 5072.42,807.871 c 0,0 -713.03,-521.73 -1681.14,-521.73 v 510.14 c 0,0 991.29,428.979 498.54,1362.309"
-         style="fill:#1b2c31;fill-opacity:1;fill-rule:nonzero;stroke:none"
-         transform="matrix(0.13333333,0,0,-0.13333333,0,449.22667)" />
-    </g>
+    
+    <linearGradient id="glassBody" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"></stop>
+      <stop offset="0.5" stop-color="#E8EEF5" stop-opacity="0.85"></stop>
+      <stop offset="1" stop-color="#B8C5D4" stop-opacity="0.85"></stop>
+    </linearGradient>
+    <linearGradient id="glassHighlight" x1="0.35" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.7"></stop>
+      <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0.2"></stop>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="glassShade" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#2A3648" stop-opacity="0"></stop>
+      <stop offset="0.6" stop-color="#2A3648" stop-opacity="0"></stop>
+      <stop offset="1" stop-color="#2A3648" stop-opacity="0.4"></stop>
+    </linearGradient>
+  </defs>
+
+  
+  <g>
+    <path fill="url(#glassBody)" d="M192.42,500.04l185.42,185.45c6.51,6.51,6.31,17.12-.43,23.38l-93.28,86.71c-6.41,5.96-16.39,5.77-22.57-.43L3.47,536.04c-5.59-5.61-1.61-15.17,6.3-15.17h61.02c8.97,0,16.24-7.27,16.24-16.24v-43.2c0-8.97-7.27-16.24-16.24-16.24H8.91c-7.88,0-11.87-9.49-6.35-15.12L261.37,165.94c6.24-6.37,16.45-6.52,22.88-.32l94.28,90.91c6.54,6.31,6.64,16.75.21,23.18l-186.32,186.32c-9.39,9.39-9.39,24.62,0,34.02Z"></path>
+    <path fill="url(#glassHighlight)" d="M192.42,500.04l185.42,185.45c6.51,6.51,6.31,17.12-.43,23.38l-93.28,86.71c-6.41,5.96-16.39,5.77-22.57-.43L3.47,536.04c-5.59-5.61-1.61-15.17,6.3-15.17h61.02c8.97,0,16.24-7.27,16.24-16.24v-43.2c0-8.97-7.27-16.24-16.24-16.24H8.91c-7.88,0-11.87-9.49-6.35-15.12L261.37,165.94c6.24-6.37,16.45-6.52,22.88-.32l94.28,90.91c6.54,6.31,6.64,16.75.21,23.18l-186.32,186.32c-9.39,9.39-9.39,24.62,0,34.02Z"></path>
+    <path fill="url(#glassShade)" d="M192.42,500.04l185.42,185.45c6.51,6.51,6.31,17.12-.43,23.38l-93.28,86.71c-6.41,5.96-16.39,5.77-22.57-.43L3.47,536.04c-5.59-5.61-1.61-15.17,6.3-15.17h61.02c8.97,0,16.24-7.27,16.24-16.24v-43.2c0-8.97-7.27-16.24-16.24-16.24H8.91c-7.88,0-11.87-9.49-6.35-15.12L261.37,165.94c6.24-6.37,16.45-6.52,22.88-.32l94.28,90.91c6.54,6.31,6.64,16.75.21,23.18l-186.32,186.32c-9.39,9.39-9.39,24.62,0,34.02Z"></path>
+  </g>
+
+  
+  <g>
+    <path fill="url(#glassBody)" d="M976.45,520.87h120.43c8.62,0,12.94,10.42,6.84,16.52l-423.27,423.3c-7.15,7.15-18.74,7.15-25.89,0l-123.47-123.47c-7.15-7.15-7.15-18.74,0-25.89l309.41-309.41c10.44-10.44,10.44-27.35,0-37.79l-309.41-309.41c-7.15-7.15-7.15-18.74,0-25.89L654.56,5.36c7.15-7.15,18.74-7.15,25.89,0l423.27,423.3c6.09,6.1,1.78,16.52-6.84,16.52h-120.43c-10.11,0-18.31,8.2-18.31,18.31v39.07c0,10.11,8.2,18.31,18.31,18.31Z"></path>
+    <path fill="url(#glassHighlight)" d="M976.45,520.87h120.43c8.62,0,12.94,10.42,6.84,16.52l-423.27,423.3c-7.15,7.15-18.74,7.15-25.89,0l-123.47-123.47c-7.15-7.15-7.15-18.74,0-25.89l309.41-309.41c10.44-10.44,10.44-27.35,0-37.79l-309.41-309.41c-7.15-7.15-7.15-18.74,0-25.89L654.56,5.36c7.15-7.15,18.74-7.15,25.89,0l423.27,423.3c6.09,6.1,1.78,16.52-6.84,16.52h-120.43c-10.11,0-18.31,8.2-18.31,18.31v39.07c0,10.11,8.2,18.31,18.31,18.31Z"></path>
+    <path fill="url(#glassShade)" d="M976.45,520.87h120.43c8.62,0,12.94,10.42,6.84,16.52l-423.27,423.3c-7.15,7.15-18.74,7.15-25.89,0l-123.47-123.47c-7.15-7.15-7.15-18.74,0-25.89l309.41-309.41c10.44-10.44,10.44-27.35,0-37.79l-309.41-309.41c-7.15-7.15-7.15-18.74,0-25.89L654.56,5.36c7.15-7.15,18.74-7.15,25.89,0l423.27,423.3c6.09,6.1,1.78,16.52-6.84,16.52h-120.43c-10.11,0-18.31,8.2-18.31,18.31v39.07c0,10.11,8.2,18.31,18.31,18.31Z"></path>
+  </g>
+
+  
+  <g>
+    <rect fill="url(#greenBody)" x="342.99" y="308.65" width="348.8" height="348.8" rx="23.7" ry="23.7" transform="translate(-190.03 507.33) rotate(-45)"></rect>
+    <rect fill="url(#greenHighlight)" x="342.99" y="308.65" width="348.8" height="348.8" rx="23.7" ry="23.7" transform="translate(-190.03 507.33) rotate(-45)"></rect>
+    <rect fill="url(#greenShade)" x="342.99" y="308.65" width="348.8" height="348.8" rx="23.7" ry="23.7" transform="translate(-190.03 507.33) rotate(-45)"></rect>
   </g>
 </svg>

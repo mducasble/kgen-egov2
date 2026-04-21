@@ -39,8 +39,15 @@ struct EgoCaptureApp: App {
 /// `KGenEyeHomeView`. Auth is purely cosmetic for now — the real wiring
 /// (Keychain persistence, Google SDK, backend call) lands alongside the
 /// auth provider integration.
+///
+/// TEMPORARY: the Login screen is disabled until auth is wired. Flip
+/// ``loginEnabled`` back to ``true`` (and revert the ``isAuthenticated``
+/// initial value) to re-enable the flow. ``LoginView`` itself is kept
+/// compiled so the design doesn't bit-rot.
 private struct RootView: View {
-    @State private var isAuthenticated = false
+    private static let loginEnabled = false
+
+    @State private var isAuthenticated = !RootView.loginEnabled
 
     var body: some View {
         ZStack {

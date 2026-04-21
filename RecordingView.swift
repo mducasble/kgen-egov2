@@ -52,18 +52,11 @@ struct RecordingView: View {
             } else {
                 AmbientImageBackdrop()
                 idleLayout
-                    .ignoresSafeArea(.container, edges: .horizontal)
-                idleBackButton
             }
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        // Always hide the system back button. In landscape on iOS 26 it
-        // renders as a circular glass chevron at top-left and visually
-        // collides with the GlassPane chrome. We draw our own back affordance
-        // inside the pane (idle state) — recording state intentionally has no
-        // back button so users stop the take first.
-        .navigationBarBackButtonHidden(true)
+        .navigationBarBackButtonHidden(orchestrator.isRecording)
         .toolbarBackground(.hidden, for: .navigationBar)
         .preferredColorScheme(.light)
         .tint(KE.ink1)
@@ -88,45 +81,8 @@ struct RecordingView: View {
 
     // MARK: - Idle (pre-recording)
 
-    /// Custom back affordance for the idle layout. Sits above the pane in
-    /// the same top-left corner the system would use, but with a footprint
-    /// we control, so it never crops or shifts the camera tile underneath.
-    private var idleBackButton: some View {
-        VStack {
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(KE.ink1)
-                        .frame(width: 40, height: 40)
-                        .background(Circle().fill(.ultraThinMaterial))
-                        .overlay(
-                            Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
-                        )
-                        .shadow(
-                            color: Color(red: 30/255, green: 40/255, blue: 55/255).opacity(0.18),
-                            radius: 6, x: 0, y: 3
-                        )
-                }
-                .buttonStyle(.plain)
-                Spacer()
-            }
-            Spacer()
-        }
-        .padding(.top, 12)
-        .padding(.leading, 12)
-    }
-
     private var idleLayout: some View {
-        // Symmetric, tight insets so the pane uses the full landscape canvas.
-        // We ignore the horizontal safe area because in landscape the sensor
-        // housing creates a one-sided leading inset (~50pt) that would push
-        // the pane visibly off-center otherwise. The back affordance is
-        // drawn as an overlay (see `idleBackButton`) and *does* respect the
-        // safe area, so it sits where the user expects.
-        GlassPane(insets: EdgeInsets(top: 6, leading: 14, bottom: 10, trailing: 14)) {
+        GlassPane(insets: EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14)) {
             HStack(spacing: 16) {
                 previewContent
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -484,10 +440,10 @@ struct RecordingView: View {
         EGOSidebarCard {
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("FOV vertical estendido")
+                    Text("Extended vertical FOV")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(KE.ink1)
-                    Text(wideFovEnabled.wrappedValue
+                    Text(verbatim: wideFovEnabled.wrappedValue
                          ? "4:3 · 1280×960 · 4 Mbps"
                          : "16:9 · 1920×1080 · 6 Mbps")
                         .font(.caption2)
@@ -601,7 +557,7 @@ struct EGOSidebarCard<Content: View>: View {
 }
 
 struct EGOStatCard: View {
-    let title: String
+    let title: LocalizedStringKey
     let value: String
     let icon: String
 
@@ -647,7 +603,7 @@ struct EGOStatCard: View {
 
 struct KERecordPill: View {
     let isRecording: Bool
-    let label: String
+    let label: LocalizedStringKey
 
     private let tint = KE.accentRed
 
@@ -783,7 +739,7 @@ final class IdlePreviewSession: ObservableObject, @unchecked Sendable {
     let session = AVCaptureSession()
 
     @Published var isReady = false
-    @Published var statusMessage = "Preparing preview…"
+    @Published var statusMessage: String = String(localized: "Preparing preview…")
 
     // Only read/written from `queue`, which serialises access.
     private var configured = false
@@ -795,19 +751,19 @@ final class IdlePreviewSession: ObservableObject, @unchecked Sendable {
         case .authorized:
             bringUpSession()
         case .notDetermined:
-            publish { $0.statusMessage = "Requesting camera access…" }
+            publish { $0.statusMessage = String(localized: "Requesting camera access…") }
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
                 guard let self else { return }
                 if granted {
                     self.bringUpSession()
                 } else {
-                    self.publish { $0.statusMessage = "Camera access denied" }
+                    self.publish { $0.statusMessage = String(localized: "Camera access denied") }
                 }
             }
         case .denied, .restricted:
-            publish { $0.statusMessage = "Camera access denied" }
+            publish { $0.statusMessage = String(localized: "Camera access denied") }
         @unknown default:
-            publish { $0.statusMessage = "Camera unavailable" }
+            publish { $0.statusMessage = String(localized: "Camera unavailable") }
         }
     }
 
@@ -842,7 +798,7 @@ final class IdlePreviewSession: ObservableObject, @unchecked Sendable {
             let running = sess.isRunning
             self.publish {
                 $0.isReady = running
-                if !running { $0.statusMessage = "Preview unavailable" }
+                if !running { $0.statusMessage = String(localized: "Preview unavailable") }
             }
         }
     }

@@ -1,0 +1,704 @@
+{
+  "sourceLanguage" : "en",
+  "version" : "1.0",
+  "strings" : {
+    "4:3 · 1280×960 · 4 Mbps" : {
+      "comment" : "Technical spec label — do not translate.",
+      "shouldTranslate" : false
+    },
+    "16:9 · 1920×1080 · 6 Mbps" : {
+      "comment" : "Technical spec label — do not translate.",
+      "shouldTranslate" : false
+    },
+    "Activity" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Actividad" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Atividade" } }
+      }
+    },
+    "Adjust values to match your physical camera mount position." : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ajusta los valores para que coincidan con la posición física del montaje de la cámara." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ajuste os valores para corresponder à posição física do suporte da câmera." } }
+      }
+    },
+    "Apple Vision" : {
+      "comment" : "Brand name — do not translate.",
+      "shouldTranslate" : false
+    },
+    "Backend" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Backend" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Backend" } }
+      }
+    },
+    "Both (parallel)" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ambos (paralelo)" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ambos (paralelo)" } }
+      }
+    },
+    "Bucket" : {
+      "comment" : "AWS S3 bucket — technical term, kept in English across locales.",
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Bucket" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Bucket" } }
+      }
+    },
+    "CAMERA MOUNT" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "MONTAJE DE CÁMARA" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "FIXAÇÃO DA CÂMERA" } }
+      }
+    },
+    "Camera access denied" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Acceso a la cámara denegado" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Acesso à câmera negado" } }
+      }
+    },
+    "Camera unavailable" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cámara no disponible" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Câmera indisponível" } }
+      }
+    },
+    "Campaign" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Campaña" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Campanha" } }
+      }
+    },
+    "Category" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Categoría" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Categoria" } }
+      }
+    },
+    "Cleaning / Janitorial" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Limpieza / Conserjería" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Limpeza / Zeladoria" } }
+      }
+    },
+    "CONTRIBUTOR" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "COLABORADOR" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "COLABORADOR" } }
+      }
+    },
+    "Continue with Google" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Continuar con Google" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Continuar com o Google" } }
+      }
+    },
+    "Country" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "País" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "País" } }
+      }
+    },
+    "Construction / Trades" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Construcción / Oficios" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Construção / Ofícios" } }
+      }
+    },
+    "Credentials embedded in app build" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Credenciales incrustadas en la compilación" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Credenciais embutidas no build" } }
+      }
+    },
+    "Day (%lld h)" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Día (%lld h)" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Dia (%lld h)" } }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Excluir" } }
+      }
+    },
+    "Dishes Cleanup" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Limpieza de loza" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Lavagem de louça" } }
+      }
+    },
+    "Downward tilt" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Inclinación hacia abajo" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Inclinação para baixo" } }
+      }
+    },
+    "Duration" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Duración" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Duração" } }
+      }
+    },
+    "e.g. Marcos D" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "ej. Marcos D" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "ex. Marcos D" } }
+      }
+    },
+    "e.g., \"dishes cleanup\" or \"warehouse stocking\"" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "ej., «limpieza de loza» o «reposición de almacén»" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "ex., «lavagem de louça» ou «reposição em armazém»" } }
+      }
+    },
+    "EGOCENTRIC YIELD ENGINE" : {
+      "comment" : "Brand subtitle under the KGeN Eye logo.",
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "MOTOR DE RENDIMIENTO EGOCÉNTRICO" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "MOTOR DE RENDIMENTO EGOCÊNTRICO" } }
+      }
+    },
+    "Email" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Correo" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "E-mail" } }
+      }
+    },
+    "ENVIRONMENT" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "ENTORNO" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "AMBIENTE" } }
+      }
+    },
+    "Export Failed" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Error al exportar" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Falha ao exportar" } }
+      }
+    },
+    "Extended vertical FOV" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "FOV vertical extendido" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "FOV vertical estendido" } }
+      }
+    },
+    "Failed · hold to retry" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Falló · mantén pulsado para reintentar" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Falhou · segure para tentar novamente" } }
+      }
+    },
+    "Field Services" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Servicios en campo" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Serviços de campo" } }
+      }
+    },
+    "Food Retail" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Venta de alimentos" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Varejo de alimentos" } }
+      }
+    },
+    "Food Service" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Gastronomía" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Alimentação" } }
+      }
+    },
+    "Forehead" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Frente" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Testa" } }
+      }
+    },
+    "Forgot my password" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Olvidé mi contraseña" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Esqueci minha senha" } }
+      }
+    },
+    "Frames" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cuadros" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Quadros" } }
+      }
+    },
+    "HAND TRACKING" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "SEGUIMIENTO DE MANOS" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "RASTREAMENTO DE MÃOS" } }
+      }
+    },
+    "Hat Brim" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ala del sombrero" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Aba do chapéu" } }
+      }
+    },
+    "Headband" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Banda para cabeza" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Faixa de cabeça" } }
+      }
+    },
+    "Hospitality" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Hospitalidad" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Hotelaria" } }
+      }
+    },
+    "IMU" : {
+      "comment" : "Technical acronym — do not translate.",
+      "shouldTranslate" : false
+    },
+    "Indoor" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Interior" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Interno" } }
+      }
+    },
+    "Kitchen, living room, bedroom, bathroom, office, enclosed areas" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cocina, sala, dormitorio, baño, oficina, áreas cerradas" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Cozinha, sala, quarto, banheiro, escritório, áreas fechadas" } }
+      }
+    },
+    "Laundry" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lavandería" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Lavanderia" } }
+      }
+    },
+    "Location" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ubicación" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Local" } }
+      }
+    },
+    "Log in" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Iniciar sesión" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Entrar" } }
+      }
+    },
+    "Manufacturing" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Manufactura" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Manufatura" } }
+      }
+    },
+    "MediaPipe" : {
+      "comment" : "Brand name — do not translate.",
+      "shouldTranslate" : false
+    },
+    "MediaPipe outputs are saved as *_mediapipe.jsonl when enabled." : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Las salidas del MediaPipe se guardan como *_mediapipe.jsonl cuando se activa." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "As saídas do MediaPipe são salvas como *_mediapipe.jsonl quando ativado." } }
+      }
+    },
+    "Model path" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ruta del modelo" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Caminho do modelo" } }
+      }
+    },
+    "Mount Type" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tipo de montaje" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Tipo de fixação" } }
+      }
+    },
+    "Night (%lld h)" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Noche (%lld h)" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Noite (%lld h)" } }
+      }
+    },
+    "No locations available for this scenario" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin ubicaciones disponibles para este escenario" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sem locais disponíveis para este cenário" } }
+      }
+    },
+    "No recordings yet" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin grabaciones todavía" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Nenhuma gravação ainda" } }
+      }
+    },
+    "OK" : {
+      "comment" : "Universal affirmation — kept as 'OK' across locales."
+    },
+    "Other Home Tasks" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Otras tareas del hogar" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Outras tarefas domésticas" } }
+      }
+    },
+    "Outdoor" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Exterior" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Externo" } }
+      }
+    },
+    "Automotive / Equipment" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Automoción / Equipo" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Automotivo / Equipamentos" } }
+      }
+    },
+    "Agriculture" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Agricultura" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Agricultura" } }
+      }
+    },
+    "Backyard, garden, balcony, street, park, open transport" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Patio, jardín, balcón, calle, parque, transporte abierto" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Quintal, jardim, varanda, rua, parque, transporte aberto" } }
+      }
+    },
+    "Password" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Contraseña" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Senha" } }
+      }
+    },
+    "Pending" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Pendiente" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pendente" } }
+      }
+    },
+    "Period" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Período" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Período" } }
+      }
+    },
+    "Preparing" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Preparando" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Preparando" } }
+      }
+    },
+    "Preparing preview…" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Preparando vista previa…" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Preparando pré-visualização…" } }
+      }
+    },
+    "Preview unavailable" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Vista previa no disponible" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pré-visualização indisponível" } }
+      }
+    },
+    "Record" : {
+      "comment" : "Button on the ActivityBriefing screen that kicks off a recording.",
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Grabar" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Gravar" } }
+      }
+    },
+    "Region" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Región" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Região" } }
+      }
+    },
+    "Requesting camera access…" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Solicitando acceso a la cámara…" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Solicitando acesso à câmera…" } }
+      }
+    },
+    "Residential" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Residencial" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Residencial" } }
+      }
+    },
+    "Commercial" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Comercial" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Comercial" } }
+      }
+    },
+    "Retail Operations" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Operaciones de tienda" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Operações de varejo" } }
+      }
+    },
+    "Retry Upload" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Reintentar subida" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Tentar enviar novamente" } }
+      }
+    },
+    "Room Tidy-Up" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Organizar cuarto" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Arrumar quarto" } }
+      }
+    },
+    "S3 PATH PREFIX" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "PREFIJO DE RUTA S3" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "PREFIXO DO CAMINHO S3" } }
+      }
+    },
+    "S3 UPLOAD" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "SUBIDA S3" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "ENVIO S3" } }
+      }
+    },
+    "Scenario" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Escenario" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Cenário" } }
+      }
+    },
+    "SESSION ID" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "ID DE SESIÓN" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "ID DA SESSÃO" } }
+      }
+    },
+    "Session" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sesión" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sessão" } }
+      }
+    },
+    "Sessions" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sesiones" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sessões" } }
+      }
+    },
+    "Sessions upload automatically after recording (≤2 min video chunks). Keys are not shown to contributors." : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Las sesiones se suben automáticamente tras grabar (chunks de vídeo ≤2 min). Las llaves no se muestran a los colaboradores." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "As sessões são enviadas automaticamente após a gravação (chunks de vídeo de ≤2 min). As chaves não são exibidas aos colaboradores." } }
+      }
+    },
+    "Set keys in EmbeddedAWSCredentials.swift before build" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Configura las llaves en EmbeddedAWSCredentials.swift antes de compilar" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Configure as chaves em EmbeddedAWSCredentials.swift antes do build" } }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ajustes" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ajustes" } }
+      }
+    },
+    "Showing first %lld characters" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mostrando los primeros %lld caracteres" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Mostrando os primeiros %lld caracteres" } }
+      }
+    },
+    "Start Recording" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Iniciar Grabación" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Iniciar Gravação" } }
+      }
+    },
+    "Step %lld of %lld" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Paso %lld de %lld" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Passo %lld de %lld" } }
+      }
+    },
+    "Stop Recording" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Detener Grabación" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Parar Gravação" } }
+      }
+    },
+    "TASK" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "TAREA" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "TAREFA" } }
+      }
+    },
+    "Task description (optional)" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Descripción de la tarea (opcional)" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Descrição da tarefa (opcional)" } }
+      }
+    },
+    "Tap Start on Home to capture your first session." : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Toca Iniciar en Inicio para grabar tu primera sesión." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Toque em Iniciar na tela inicial para gravar sua primeira sessão." } }
+      }
+    },
+    "Temple" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sien" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Têmpora" } }
+      }
+    },
+    "Translation from head center (m)" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Traslación desde el centro de la cabeza (m)" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Distância do centro da cabeça (m)" } }
+      }
+    },
+    "Type" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tipo" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Tipo" } }
+      }
+    },
+    "Unable to open file" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo abrir el archivo" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível abrir o arquivo" } }
+      }
+    },
+    "Uploaded" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Subido" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Enviado" } }
+      }
+    },
+    "Uploading %lld%%" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Subiendo %lld%%" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Enviando %lld%%" } }
+      }
+    },
+    "View Sessions" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ver Sesiones" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ver Sessões" } }
+      }
+    },
+    "Warehouse / Logistics" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Almacén / Logística" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Armazém / Logística" } }
+      }
+    },
+    "X (right)" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "X (derecha)" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "X (direita)" } }
+      }
+    },
+    "Y (up)" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Y (arriba)" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Y (cima)" } }
+      }
+    },
+    "Your name" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu nombre" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Seu nome" } }
+      }
+    },
+    "Your name groups every session you record under the same S3 folder. Leaving it blank uses an anonymous per-device token." : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu nombre agrupa todas las sesiones que grabes bajo la misma carpeta S3. Si lo dejas en blanco, se usa un identificador anónimo por dispositivo." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Seu nome agrupa cada sessão gravada na mesma pasta S3. Deixar em branco usa um identificador anônimo por dispositivo." } }
+      }
+    },
+    "Z (fwd)" : {
+      "localizations" : {
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Z (adelante)" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Z (frente)" } }
+      }
+    },
+    "group.caregiving" : {
+      "comment" : "Taxonomy task-category group label — shown uppercased in the wizard.",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "CAREGIVING" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "CUIDADO DE OTROS" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "CUIDADO COM OUTROS" } }
+      }
+    },
+    "group.errands" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "ERRANDS" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "MANDADOS" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "TAREFAS" } }
+      }
+    },
+    "group.food" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "FOOD" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "COMIDA" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "ALIMENTAÇÃO" } }
+      }
+    },
+    "group.handiwork" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "HANDIWORK" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "TRABAJO MANUAL" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "TRABALHO MANUAL" } }
+      }
+    },
+    "group.housekeeping" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "HOUSEKEEPING" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "LIMPIEZA DEL HOGAR" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "DOMÉSTICO" } }
+      }
+    },
+    "group.mobility" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "MOBILITY" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "MOVILIDAD" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "DESLOCAMENTO" } }
+      }
+    },
+    "group.outdoor_work" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "OUTDOOR WORK" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "TRABAJO EXTERIOR" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "TRABALHO EXTERNO" } }
+      }
+    },
+    "group.productive" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "PRODUCTIVE" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "PRODUCTIVO" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "PRODUTIVO" } }
+      }
+    },
+    "group.recreation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "RECREATION" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "RECREACIÓN" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "RECREAÇÃO" } }
+      }
+    },
+    "group.self_care" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "SELF CARE" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "CUIDADO PERSONAL" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "CUIDADO PESSOAL" } }
+      }
+    },
+    "group.social" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "SOCIAL" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "SOCIAL" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "SOCIAL" } }
+      }
+    }
+  }
+}

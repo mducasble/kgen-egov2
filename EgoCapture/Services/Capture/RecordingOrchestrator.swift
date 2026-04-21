@@ -496,6 +496,29 @@ final class RecordingOrchestrator: ObservableObject {
             }
         }
 
+        // Factory-nominal IMU intrinsics. Keyed off the same
+        // ``hardwareIdentifier`` already recorded in metadata.json so the
+        // on-device payload is identical to what the S3 backfill script
+        // would produce for this device. Non-fatal on failure — the
+        // session is already committed at this point, we'd rather ship a
+        // session without intrinsics than lose the recording.
+        let intrinsicsPayload = ImuIntrinsics.build(
+            sessionId: sessionId,
+            hardwareIdentifier: metadata.device.hardwareIdentifier,
+            systemVersion: metadata.device.systemVersion,
+            vendorId: metadata.collector.vendorId,
+            imuTargetHz: metadata.capture.imuTargetHz,
+            timestampClock: metadata.capture.timestampClock
+        )
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(intrinsicsPayload)
+            try data.write(to: SessionFiles.url("imu_intrinsics", "json", in: dir), options: .atomic)
+        } catch {
+            print("[Orchestrator] Failed to write imu_intrinsics.json: \(error)")
+        }
+
         let bitrateMbps = Double(videoCaptureService?.targetBitrate ?? 6_000_000) / 1_000_000.0
 
         let techVal = TechnicalValidation(

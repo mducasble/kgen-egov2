@@ -271,7 +271,7 @@ struct SettingsView: View {
 
     // MARK: - Helpers
 
-    private func glassPickerRow(title: String, selection: Binding<String>, options: [(String, String)]) -> some View {
+    private func glassPickerRow(title: LocalizedStringKey, selection: Binding<String>, options: [(LocalizedStringKey, String)]) -> some View {
         HStack {
             Text(title)
                 .font(.subheadline)
@@ -293,9 +293,15 @@ struct SettingsView: View {
                 }
             } label: {
                 HStack(spacing: 4) {
-                    Text(options.first(where: { $0.1 == selection.wrappedValue })?.0 ?? selection.wrappedValue)
-                        .font(.subheadline)
-                        .foregroundStyle(KE.ink1.opacity(0.75))
+                    Group {
+                        if let match = options.first(where: { $0.1 == selection.wrappedValue }) {
+                            Text(match.0)
+                        } else {
+                            Text(verbatim: selection.wrappedValue)
+                        }
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(KE.ink1.opacity(0.75))
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.caption2)
                         .foregroundStyle(KE.ink3)
@@ -330,7 +336,7 @@ struct SettingsView: View {
 // MARK: - Glass Components
 
 struct GlassSection<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     let icon: String
     @ViewBuilder let content: Content
 
@@ -358,7 +364,7 @@ struct GlassSection<Content: View>: View {
 }
 
 struct GlassTextField: View {
-    let label: String
+    let label: LocalizedStringKey
     @Binding var value: Double
 
     var body: some View {

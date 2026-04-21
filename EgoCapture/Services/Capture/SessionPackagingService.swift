@@ -71,6 +71,10 @@ final class SessionPackagingService {
             return ("json", "Session metadata: IMU-only mode with camera intrinsics/extrinsics, encoding compliance, collector ID, color profile, sync metrics, and spec compliance summary", nil)
         case "technical_validation" where ext == "json":
             return ("json", "Machine-readable technical quality report with pass/fail criteria, encoding validation, calibration status, and sync health", nil)
+        case "taxonomy" where ext == "json":
+            return ("json", "Taxonomy selection (viewpoint, scenario, location, task) plus auto-detected day/night. Out-of-MCAP annotation.", nil)
+        case "imu_intrinsics" where ext == "json":
+            return ("json", ImuIntrinsics.manifestArtifactDescription, nil)
         default:
             return (ext, "Additional artifact", nil)
         }

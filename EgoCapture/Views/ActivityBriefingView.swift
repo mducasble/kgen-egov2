@@ -39,7 +39,7 @@ struct ActivityBriefingView: View {
                         RecordingView(taxonomy: selection)
                     } label: {
                         KEPillButton(
-                            label: "Gravar",
+                            label: "Record",
                             systemImage: "record.circle.fill",
                             variant: .red
                         )
@@ -101,23 +101,30 @@ private struct BriefingSummary: View {
     let selection: SessionTaxonomy
 
     var body: some View {
-        VStack(spacing: 10) {
+        let hr = selection.recordingHour
+        let periodValue: String = selection.timeOfDay == "day"
+            ? String(localized: "Day (\(hr) h)")
+            : String(localized: "Night (\(hr) h)")
+        let scenarioValue: String = selection.scenarioBucket == "indoor"
+            ? String(localized: "Indoor")
+            : String(localized: "Outdoor")
+        return VStack(spacing: 10) {
             row(icon: selection.scenarioBucket == "indoor" ? "house.fill" : "tree.fill",
-                title: "Cenário",
-                value: selection.scenarioBucket == "indoor" ? "Interno" : "Externo")
+                title: "Scenario",
+                value: scenarioValue)
             row(icon: "mappin.and.ellipse",
-                title: "Local",
+                title: "Location",
                 value: selection.locationLabelPt)
             row(icon: "tag.fill",
-                title: "Atividade",
+                title: "Activity",
                 value: selection.taskCategoryLabelPt)
             row(icon: selection.timeOfDay == "day" ? "sun.max.fill" : "moon.stars.fill",
-                title: "Período",
-                value: selection.timeOfDay == "day" ? "Dia (\(selection.recordingHour)h)" : "Noite (\(selection.recordingHour)h)")
+                title: "Period",
+                value: periodValue)
         }
     }
 
-    private func row(icon: String, title: String, value: String) -> some View {
+    private func row(icon: String, title: LocalizedStringKey, value: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))

@@ -420,7 +420,7 @@ private struct SessionEnrichment {
     var thumbnail: UIImage?
 
     static let placeholder = SessionEnrichment(
-        activityLabel: "Session",
+        activityLabel: String(localized: "Session"),
         sizeBytes: 0,
         durationSec: 0,
         thumbnail: nil
@@ -430,7 +430,7 @@ private struct SessionEnrichment {
         let size = SessionManager.shared.sessionSize(id: id)
         let thumb = ThumbnailGenerator.cachedImage(in: directory)
 
-        var label = "Session"
+        var label = String(localized: "Session")
         var duration: Double = 0
 
         if let url = SessionFiles.resolveExisting("metadata", "json", in: directory),
