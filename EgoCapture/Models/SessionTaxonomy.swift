@@ -180,7 +180,7 @@ struct SessionTaxonomy: Codable, Hashable {
         } else {
             list = selectedVerbsEn
         }
-        return list.joined(separator: ", ")
+        return list.map(\.verbDisplayCased).joined(separator: ", ")
     }
 
     /// Display title for UI surfaces (briefing chrome, recording overlay).

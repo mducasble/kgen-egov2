@@ -49,3 +49,14 @@ enum TaskVerbsLoader {
         shared[taskCategoryCode]
     }
 }
+
+// MARK: - Display casing
+
+extension String {
+    /// Uppercases only the first character of a verb token for on-screen use.
+    /// Underlying `task_verbs.json` and `taxonomy.json` stay lowercased.
+    var verbDisplayCased: String {
+        guard !isEmpty else { return self }
+        return prefix(1).uppercased() + dropFirst()
+    }
+}

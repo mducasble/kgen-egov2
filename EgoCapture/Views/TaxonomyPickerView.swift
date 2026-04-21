@@ -348,9 +348,11 @@ private struct VerbPickerView: View {
 
     private func verbLabel(index: Int, entry: TaskVerbsBundle.Entry) -> String {
         let lang = Locale.current.language.languageCode?.identifier.lowercased() ?? "en"
-        if lang.hasPrefix("pt") { return entry.verbsPt[index] }
-        if lang.hasPrefix("es") { return entry.verbsEs[index] }
-        return entry.verbsEn[index]
+        let raw: String
+        if lang.hasPrefix("pt") { raw = entry.verbsPt[index] }
+        else if lang.hasPrefix("es") { raw = entry.verbsEs[index] }
+        else { raw = entry.verbsEn[index] }
+        return raw.verbDisplayCased
     }
 
     private func finalizedSelection() -> SessionTaxonomy {
