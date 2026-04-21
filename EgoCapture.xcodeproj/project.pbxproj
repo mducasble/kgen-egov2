@@ -70,6 +70,8 @@
 		AA000090 /* EGOTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000090 /* EGOTheme.swift */; };
 		AA000091 /* KGenEyeHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000091 /* KGenEyeHomeView.swift */; };
 		AA000117 /* KGenEyeLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000117 /* KGenEyeLogo.swift */; };
+		AA000118 /* task_verbs.json in Resources */ = {isa = PBXBuildFile; fileRef = AB000118 /* task_verbs.json */; };
+		AA000119 /* TaskVerbsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000119 /* TaskVerbsCatalog.swift */; };
 		AA000092 /* Orbitron.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AB000092 /* Orbitron.ttf */; };
 		BA100001 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = BA100002 /* hand_landmarker.task */; };
 /* End PBXBuildFile section */
@@ -141,6 +143,8 @@
 		AB000090 /* EGOTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EGOTheme.swift; sourceTree = "<group>"; };
 		AB000091 /* KGenEyeHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KGenEyeHomeView.swift; sourceTree = "<group>"; };
 		AB000117 /* KGenEyeLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KGenEyeLogo.swift; sourceTree = "<group>"; };
+		AB000118 /* task_verbs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Resources/task_verbs.json; sourceTree = "<group>"; };
+		AB000119 /* TaskVerbsCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskVerbsCatalog.swift; sourceTree = "<group>"; };
 		AB000092 /* Orbitron.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/Orbitron.ttf; sourceTree = "<group>"; };
 		AC000001 /* EgoCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EgoCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA100002 /* hand_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = hand_landmarker.task; sourceTree = "<group>"; };
@@ -190,6 +194,7 @@
 				AB000070 /* Assets.xcassets */,
 				AB000092 /* Orbitron.ttf */,
 				AB000113 /* taxonomy.json */,
+				AB000118 /* task_verbs.json */,
 				AB000115 /* Localizable.xcstrings */,
 				AB000116 /* InfoPlist.xcstrings */,
 				BA100002 /* hand_landmarker.task */,
@@ -216,6 +221,7 @@
 				AB000045 /* LensDistortionCalibration.swift */,
 				AB000110 /* Taxonomy.swift */,
 				AB000111 /* SessionTaxonomy.swift */,
+				AB000119 /* TaskVerbsCatalog.swift */,
 				AB000114 /* ImuIntrinsics.swift */,
 			);
 			path = Models;
@@ -406,6 +412,7 @@
 				AA000092 /* Orbitron.ttf in Resources */,
 				BA100001 /* hand_landmarker.task in Resources */,
 				AA000113 /* taxonomy.json in Resources */,
+				AA000118 /* task_verbs.json in Resources */,
 				AA000115 /* Localizable.xcstrings in Resources */,
 				AA000116 /* InfoPlist.xcstrings in Resources */,
 			);
@@ -501,6 +508,7 @@
 				AA000100 /* EmbeddedAWSSecrets.swift in Sources */,
 				AA000110 /* Taxonomy.swift in Sources */,
 				AA000111 /* SessionTaxonomy.swift in Sources */,
+				AA000119 /* TaskVerbsCatalog.swift in Sources */,
 				AA000114 /* ImuIntrinsics.swift in Sources */,
 				AA000112 /* TaxonomyPickerView.swift in Sources */,
 				AA000103 /* ActivityBriefingView.swift in Sources */,

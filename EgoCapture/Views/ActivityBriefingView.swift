@@ -170,6 +170,11 @@ private struct BriefingSummary: View {
             row(icon: "tag.fill",
                 title: "Activity",
                 value: selection.taskCategoryLabelLocalized)
+            if !selection.selectedVerbsPt.isEmpty {
+                row(icon: "hand.point.up.left.and.text.fill",
+                    title: "Actions",
+                    value: selection.selectedVerbsLocalizedLine)
+            }
             row(icon: selection.timeOfDay == "day" ? "sun.max.fill" : "moon.stars.fill",
                 title: "Period",
                 value: periodValue)
@@ -219,6 +224,9 @@ private struct BriefingSummary: View {
             taskCategoryGroup: "housekeeping",
             taskCategoryLabelPt: "Lavagem de Louça",
             taskCategoryLabelEn: "Dishwashing",
+            selectedVerbsPt: ["enxaguar", "secar"],
+            selectedVerbsEn: ["rinse", "dry"],
+            selectedVerbsEs: ["enjuagar", "secar"],
             timeOfDay: "day",
             recordingHour: 14
         ))

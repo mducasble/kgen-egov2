@@ -486,6 +486,9 @@ final class RecordingOrchestrator: ObservableObject {
                 taskCategoryGroup: selection.taskCategoryGroup,
                 taskCategoryLabelPt: selection.taskCategoryLabelPt,
                 taskCategoryLabelEn: selection.taskCategoryLabelEn,
+                selectedVerbsPt: selection.selectedVerbsPt,
+                selectedVerbsEn: selection.selectedVerbsEn,
+                selectedVerbsEs: selection.selectedVerbsEs,
                 timeOfDay: day.label,
                 recordingHour: day.hour
             )

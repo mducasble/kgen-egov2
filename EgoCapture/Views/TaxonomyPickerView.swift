@@ -10,7 +10,7 @@ struct ScenarioPickerView: View {
     private let taxonomy = TaxonomyLoader.shared
 
     var body: some View {
-        WizardScaffold(title: String(localized: "Scenario"), step: 1, totalSteps: 3) {
+        WizardScaffold(title: String(localized: "Scenario"), step: 1, totalSteps: 4) {
             VStack(spacing: 12) {
                 ForEach(Taxonomy.BinaryScenario.allCases) { bucket in
                     NavigationLink {
@@ -82,7 +82,7 @@ struct LocationPickerView: View {
     }
 
     var body: some View {
-        WizardScaffold(title: scenarioBucket.localizedLabel, step: 2, totalSteps: 3) {
+        WizardScaffold(title: scenarioBucket.localizedLabel, step: 2, totalSteps: 4) {
             ScrollView {
                 VStack(spacing: 10) {
                     ForEach(locations) { location in
@@ -132,7 +132,7 @@ struct TaskCategoryPickerView: View {
     }
 
     var body: some View {
-        WizardScaffold(title: String(localized: "Activity"), step: 3, totalSteps: 3) {
+        WizardScaffold(title: String(localized: "Activity"), step: 3, totalSteps: 4) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     ContextHeader(
@@ -150,8 +150,11 @@ struct TaskCategoryPickerView: View {
                             VStack(spacing: 8) {
                                 ForEach(entry.items) { task in
                                     NavigationLink {
-                                        ActivityBriefingView(
-                                            selection: makeSelection(for: task)
+                                        VerbPickerView(
+                                            scenarioBucket: scenarioBucket,
+                                            location: location,
+                                            task: task,
+                                            baseSelection: makeBaseSelection(for: task)
                                         )
                                     } label: {
                                         WizardRow(
@@ -171,7 +174,7 @@ struct TaskCategoryPickerView: View {
         }
     }
 
-    private func makeSelection(for task: Taxonomy.TaskCategory) -> SessionTaxonomy {
+    private func makeBaseSelection(for task: Taxonomy.TaskCategory) -> SessionTaxonomy {
         let dayInfo = SessionTaxonomy.dayOrNight()
         return SessionTaxonomy(
             schemaVersion: TaxonomyLoader.shared.schemaVersion,
@@ -186,6 +189,9 @@ struct TaskCategoryPickerView: View {
             taskCategoryGroup: task.group,
             taskCategoryLabelPt: task.labelPt,
             taskCategoryLabelEn: task.labelEn,
+            selectedVerbsPt: [],
+            selectedVerbsEn: [],
+            selectedVerbsEs: [],
             timeOfDay: dayInfo.label,
             recordingHour: dayInfo.hour
         )
@@ -223,6 +229,195 @@ struct TaskCategoryPickerView: View {
             return raw.replacingOccurrences(of: "_", with: " ").uppercased()
         }
         return String(localized: key)
+    }
+}
+
+// MARK: - Step 4: Verbs (multi-select)
+
+private struct VerbPickerView: View {
+    let scenarioBucket: Taxonomy.BinaryScenario
+    let location: Taxonomy.Location
+    let task: Taxonomy.TaskCategory
+    let baseSelection: SessionTaxonomy
+
+    @State private var selectedIndices: Set<Int> = []
+
+    private var verbEntry: TaskVerbsBundle.Entry? {
+        TaskVerbsLoader.verbs(for: task.code)
+    }
+
+    private var verbCount: Int {
+        verbEntry.map { $0.verbsPt.count } ?? 0
+    }
+
+    var body: some View {
+        WizardScaffold(title: String(localized: "Actions"), step: 4, totalSteps: 4) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    ContextHeaderWithTask(
+                        scenarioBucket: scenarioBucket,
+                        location: location,
+                        taskTitle: task.localizedLabel
+                    )
+
+                    Text("Select the actions you will perform in this recording.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(KE.ink2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let entry = verbEntry, !entry.verbsPt.isEmpty {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 148), spacing: 8, alignment: .leading)],
+                            alignment: .leading,
+                            spacing: 8
+                        ) {
+                            ForEach(0 ..< entry.verbsPt.count, id: \.self) { i in
+                                verbChip(index: i, entry: entry)
+                            }
+                        }
+                    } else {
+                        EmptyStateLabel("No verb list for this activity yet.")
+                    }
+
+                    NavigationLink {
+                        ActivityBriefingView(selection: finalizedSelection())
+                    } label: {
+                        KEPillButton(
+                            label: "Continue",
+                            systemImage: "arrow.right.circle.fill",
+                            variant: .blue
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canContinue)
+                    .opacity(canContinue ? 1 : 0.45)
+                }
+                .padding(.vertical, 16)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private var canContinue: Bool {
+        if verbEntry == nil || verbCount == 0 { return true }
+        return !selectedIndices.isEmpty
+    }
+
+    private func verbChip(index: Int, entry: TaskVerbsBundle.Entry) -> some View {
+        let on = selectedIndices.contains(index)
+        let label = verbLabel(index: index, entry: entry)
+        return Button {
+            if on {
+                selectedIndices.remove(index)
+            } else {
+                selectedIndices.insert(index)
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(KE.ink1)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(on ? Color(red: 0.75, green: 0.9, blue: 0.35).opacity(0.45) : Color.white.opacity(0.28))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(on ? Color(red: 0.45, green: 0.65, blue: 0.2) : Color.white.opacity(0.5), lineWidth: on ? 1.8 : 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func verbLabel(index: Int, entry: TaskVerbsBundle.Entry) -> String {
+        let lang = Locale.current.language.languageCode?.identifier.lowercased() ?? "en"
+        if lang.hasPrefix("pt") { return entry.verbsPt[index] }
+        if lang.hasPrefix("es") { return entry.verbsEs[index] }
+        return entry.verbsEn[index]
+    }
+
+    private func finalizedSelection() -> SessionTaxonomy {
+        guard let entry = verbEntry, !selectedIndices.isEmpty else {
+            return SessionTaxonomy(
+                schemaVersion: baseSelection.schemaVersion,
+                viewpointCode: baseSelection.viewpointCode,
+                scenarioCode: baseSelection.scenarioCode,
+                scenarioBucket: baseSelection.scenarioBucket,
+                domainCode: baseSelection.domainCode,
+                locationCode: baseSelection.locationCode,
+                locationLabelPt: baseSelection.locationLabelPt,
+                locationLabelEn: baseSelection.locationLabelEn,
+                taskCategoryCode: baseSelection.taskCategoryCode,
+                taskCategoryGroup: baseSelection.taskCategoryGroup,
+                taskCategoryLabelPt: baseSelection.taskCategoryLabelPt,
+                taskCategoryLabelEn: baseSelection.taskCategoryLabelEn,
+                selectedVerbsPt: [],
+                selectedVerbsEn: [],
+                selectedVerbsEs: [],
+                timeOfDay: baseSelection.timeOfDay,
+                recordingHour: baseSelection.recordingHour
+            )
+        }
+        let order = selectedIndices.sorted()
+        let pt = order.map { entry.verbsPt[$0] }
+        let en = order.map { entry.verbsEn[$0] }
+        let es = order.map { entry.verbsEs[$0] }
+        return SessionTaxonomy(
+            schemaVersion: baseSelection.schemaVersion,
+            viewpointCode: baseSelection.viewpointCode,
+            scenarioCode: baseSelection.scenarioCode,
+            scenarioBucket: baseSelection.scenarioBucket,
+            domainCode: baseSelection.domainCode,
+            locationCode: baseSelection.locationCode,
+            locationLabelPt: baseSelection.locationLabelPt,
+            locationLabelEn: baseSelection.locationLabelEn,
+            taskCategoryCode: baseSelection.taskCategoryCode,
+            taskCategoryGroup: baseSelection.taskCategoryGroup,
+            taskCategoryLabelPt: baseSelection.taskCategoryLabelPt,
+            taskCategoryLabelEn: baseSelection.taskCategoryLabelEn,
+            selectedVerbsPt: pt,
+            selectedVerbsEn: en,
+            selectedVerbsEs: es,
+            timeOfDay: baseSelection.timeOfDay,
+            recordingHour: baseSelection.recordingHour
+        )
+    }
+}
+
+private struct ContextHeaderWithTask: View {
+    let scenarioBucket: Taxonomy.BinaryScenario
+    let location: Taxonomy.Location
+    let taskTitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Image(systemName: scenarioBucket.iconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KE.ink2)
+                Text(verbatim: "\(scenarioBucket.localizedLabel) · \(location.localizedLabel)")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(KE.ink2)
+                Spacer()
+            }
+            Text(taskTitle)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(KE.ink3)
+                .padding(.leading, 24)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.32))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.45), lineWidth: 1)
+        )
     }
 }
 
