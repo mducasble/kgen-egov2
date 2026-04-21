@@ -156,7 +156,7 @@ struct TaskCategoryPickerView: View {
                                     } label: {
                                         WizardRow(
                                             title: task.localizedLabel,
-                                            subtitle: task.description
+                                            subtitle: task.localizedDescription
                                         )
                                     }
                                     .buttonStyle(.plain)

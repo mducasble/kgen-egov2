@@ -7,7 +7,9 @@ import Foundation
 struct Taxonomy: Codable, Hashable {
     let schemaVersion: String
     let generatedAt: String
-    let description: String
+    let descriptionPt: String
+    let descriptionEn: String
+    let descriptionEs: String
     let viewpoints: [Viewpoint]
     let domains: [Domain]
     let scenarios: [Scenario]
@@ -17,7 +19,9 @@ struct Taxonomy: Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
         case generatedAt = "generated_at"
-        case description
+        case descriptionPt = "description_pt"
+        case descriptionEn = "description_en"
+        case descriptionEs = "description_es"
         case viewpoints
         case domains
         case scenarios
@@ -29,15 +33,23 @@ struct Taxonomy: Codable, Hashable {
         let code: String
         let labelPt: String
         let labelEn: String
-        let description: String
+        let descriptionPt: String
+        let descriptionEn: String
+        let descriptionEs: String
 
         var id: String { code }
+
+        var localizedDescription: String {
+            TaxonomyLocalizedDescription.pick(pt: descriptionPt, en: descriptionEn, es: descriptionEs)
+        }
 
         enum CodingKeys: String, CodingKey {
             case code
             case labelPt = "label_pt"
             case labelEn = "label_en"
-            case description
+            case descriptionPt = "description_pt"
+            case descriptionEn = "description_en"
+            case descriptionEs = "description_es"
         }
     }
 
@@ -45,15 +57,23 @@ struct Taxonomy: Codable, Hashable {
         let code: String
         let labelPt: String
         let labelEn: String
-        let description: String
+        let descriptionPt: String
+        let descriptionEn: String
+        let descriptionEs: String
 
         var id: String { code }
+
+        var localizedDescription: String {
+            TaxonomyLocalizedDescription.pick(pt: descriptionPt, en: descriptionEn, es: descriptionEs)
+        }
 
         enum CodingKeys: String, CodingKey {
             case code
             case labelPt = "label_pt"
             case labelEn = "label_en"
-            case description
+            case descriptionPt = "description_pt"
+            case descriptionEn = "description_en"
+            case descriptionEs = "description_es"
         }
     }
 
@@ -61,15 +81,23 @@ struct Taxonomy: Codable, Hashable {
         let code: String
         let labelPt: String
         let labelEn: String
-        let description: String
+        let descriptionPt: String
+        let descriptionEn: String
+        let descriptionEs: String
 
         var id: String { code }
+
+        var localizedDescription: String {
+            TaxonomyLocalizedDescription.pick(pt: descriptionPt, en: descriptionEn, es: descriptionEs)
+        }
 
         enum CodingKeys: String, CodingKey {
             case code
             case labelPt = "label_pt"
             case labelEn = "label_en"
-            case description
+            case descriptionPt = "description_pt"
+            case descriptionEn = "description_en"
+            case descriptionEs = "description_es"
         }
     }
 
@@ -104,7 +132,9 @@ struct Taxonomy: Codable, Hashable {
         let code: String
         let labelPt: String
         let labelEn: String
-        let description: String
+        let descriptionPt: String
+        let descriptionEn: String
+        let descriptionEs: String
         let group: String
 
         var id: String { code }
@@ -116,11 +146,18 @@ struct Taxonomy: Codable, Hashable {
             TaxonomyLocalization.resolve(key: "task.\(code)", fallback: labelPt)
         }
 
+        /// Long-form explanation of the activity, in the current UI language.
+        var localizedDescription: String {
+            TaxonomyLocalizedDescription.pick(pt: descriptionPt, en: descriptionEn, es: descriptionEs)
+        }
+
         enum CodingKeys: String, CodingKey {
             case code
             case labelPt = "label_pt"
             case labelEn = "label_en"
-            case description
+            case descriptionPt = "description_pt"
+            case descriptionEn = "description_en"
+            case descriptionEs = "description_es"
             case group
         }
     }
@@ -137,6 +174,18 @@ enum TaxonomyLocalization {
     static func resolve(key: String, fallback: String) -> String {
         let translated = Bundle.main.localizedString(forKey: key, value: fallback, table: nil)
         return translated
+    }
+}
+
+/// Picks among PT / EN / ES strings bundled in `taxonomy.json` based on the
+/// device's primary UI language (`Locale.current`). Falls back to English
+/// for any language other than Portuguese or Spanish.
+enum TaxonomyLocalizedDescription {
+    static func pick(pt: String, en: String, es: String) -> String {
+        let lang = Locale.current.language.languageCode?.identifier.lowercased() ?? "en"
+        if lang.hasPrefix("pt") { return pt }
+        if lang.hasPrefix("es") { return es }
+        return en
     }
 }
 
@@ -165,7 +214,9 @@ extension Taxonomy {
     static let empty = Taxonomy(
         schemaVersion: "0.0.0",
         generatedAt: "",
-        description: "Stub — taxonomy.json missing from bundle",
+        descriptionPt: "Stub — taxonomy.json missing from bundle",
+        descriptionEn: "Stub — taxonomy.json missing from bundle",
+        descriptionEs: "Stub — taxonomy.json missing from bundle",
         viewpoints: [],
         domains: [],
         scenarios: [],
