@@ -231,24 +231,22 @@ private struct KEPillSurface<S: InsettableShape>: ViewModifier {
 
 // MARK: - Brand lockup
 
-/// KGeN Eye mark at the top of the Home pane. The brand SVG already carries
-/// its own "glass" language (the two translucent bracket shapes flanking the
-/// green diamond use `glassBody`/`glassHighlight`/`glassShade` gradients), so
-/// we render the artwork at full fidelity and add only a soft drop shadow
-/// for depth. Wrapping it in a `.glassEffect(..., in: Circle())` was tried
-/// and explicitly rejected — it produced a visible disc around the glyph.
+/// KGeN Eye mark at the top of the Home pane. The artwork is drawn as a
+/// native SwiftUI vector (see ``KGenEyeLogo``) so it stays sharp at every
+/// scale factor and the glass rims can be tuned in code without exporting
+/// a new SVG. The drop shadows match the mockup spec — one broad, soft
+/// pass for ambient depth and one tight pass for edge contact.
 struct GlassLogoBadge: View {
-    /// ~2× the original inline size: 108 → 184 (+70%) → 221 (+20%). Kept as
-    /// a constant so a future asset swap can tweak it in one place.
-    private let artworkSize: CGFloat = 221
+    /// Width of the mark. The aspect-preserving ``KGenEyeLogo`` derives its
+    /// height from this (≈ ``width * 0.873``).
+    private let artworkWidth: CGFloat = 240
 
     var body: some View {
-        Image("kgen-eye-logo")
-            .resizable()
-            .scaledToFit()
-            .frame(width: artworkSize, height: artworkSize)
-            .shadow(color: Color(red: 40/255, green: 55/255, blue: 80/255).opacity(0.22),
-                    radius: 18, x: 0, y: 8)
+        KGenEyeLogo(width: artworkWidth)
+            .shadow(color: Color(red: 0.12, green: 0.18, blue: 0.25).opacity(0.12),
+                    radius: 5, y: 8)
+            .shadow(color: Color(red: 0.12, green: 0.18, blue: 0.26).opacity(0.10),
+                    radius: 3, y: 4)
             .accessibilityHidden(true)
     }
 }
@@ -402,7 +400,7 @@ struct KGenEyeHomeView: View {
     private var homePane: some View {
         GlassPane {
                     VStack(spacing: 0) {
-                        Spacer().frame(height: 36)
+                        Spacer().frame(height: 66)
                         GlassLogoBadge()
                         Spacer().frame(height: 18)
                         BrandLockup()

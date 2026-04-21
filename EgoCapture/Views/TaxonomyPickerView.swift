@@ -93,7 +93,7 @@ struct LocationPickerView: View {
                             )
                         } label: {
                             WizardRow(
-                                title: location.labelPt,
+                                title: location.localizedLabel,
                                 subtitle: subtitle(for: location)
                             )
                         }
@@ -127,7 +127,7 @@ struct TaskCategoryPickerView: View {
         let order = uniqueGroupOrder(all)
         return order.compactMap { key in
             guard let items = groups[key] else { return nil }
-            return (group: key, items: items.sorted { $0.labelPt < $1.labelPt })
+            return (group: key, items: items.sorted { $0.localizedLabel.localizedCaseInsensitiveCompare($1.localizedLabel) == .orderedAscending })
         }
     }
 
@@ -155,7 +155,7 @@ struct TaskCategoryPickerView: View {
                                         )
                                     } label: {
                                         WizardRow(
-                                            title: task.labelPt,
+                                            title: task.localizedLabel,
                                             subtitle: task.description
                                         )
                                     }
@@ -367,7 +367,7 @@ private struct ContextHeader: View {
             Image(systemName: scenarioBucket.iconName)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(KE.ink2)
-            Text(verbatim: "\(scenarioBucket.localizedLabel) · \(location.labelPt)")
+            Text(verbatim: "\(scenarioBucket.localizedLabel) · \(location.localizedLabel)")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(KE.ink2)
             Spacer()

@@ -41,10 +41,32 @@ struct SessionTaxonomy: Codable, Hashable {
     /// without losing the original signal.
     let recordingHour: Int
 
+    /// Display-ready activity label for UI surfaces, resolved through the
+    /// same `task.<code>` catalog key used by ``Taxonomy/TaskCategory``.
+    /// Falls back to ``taskCategoryLabelPt`` (the serialised canonical
+    /// label) when the current locale has no translation.
+    var taskCategoryLabelLocalized: String {
+        TaxonomyLocalization.resolve(
+            key: "task.\(taskCategoryCode)",
+            fallback: taskCategoryLabelPt
+        )
+    }
+
+    /// Display-ready location label. See ``taskCategoryLabelLocalized`` for
+    /// the resolution strategy.
+    var locationLabelLocalized: String {
+        TaxonomyLocalization.resolve(
+            key: "location.\(locationCode)",
+            fallback: locationLabelPt
+        )
+    }
+
     /// Display title for UI surfaces (briefing chrome, recording overlay).
-    /// Defaults to the task label, prefixed by the location for context.
+    /// Uses the localized variants so the chrome follows the UI locale,
+    /// while the serialised `locationLabelPt` / `taskCategoryLabelPt` stay
+    /// fixed for the downstream pipeline.
     var displayTitle: String {
-        "\(taskCategoryLabelPt) · \(locationLabelPt)"
+        "\(taskCategoryLabelLocalized) · \(locationLabelLocalized)"
     }
 
     static func dayOrNight(for date: Date = Date(), calendar: Calendar = .current) -> (label: String, hour: Int) {

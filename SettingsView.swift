@@ -9,7 +9,10 @@ struct SettingsView: View {
 
     @AppStorage("environment_type") private var environmentType = "residential"
     @AppStorage("environment_sub") private var environmentSubCategory = "room_tidy_up"
-    @AppStorage("country") private var country = "US"
+    /// Defaults to the device's current region (e.g. `"BR"`, `"US"`, `"ES"`)
+    /// so new installs arrive pre-filled. Once the user edits the field the
+    /// stored value wins and the default is ignored by ``AppStorage``.
+    @AppStorage("country") private var country: String = Locale.current.region?.identifier ?? "US"
     @AppStorage("task_description") private var taskDescription = ""
     @AppStorage("selected_hand_tracking_backend") private var handTrackingBackend = HandTrackingBackendType.appleVision.rawValue
     @AppStorage("mediapipe_model_path") private var mediaPipeModelPath = "hand_landmarker.task"

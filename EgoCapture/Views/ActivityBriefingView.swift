@@ -11,6 +11,25 @@ import SwiftUI
 struct ActivityBriefingView: View {
     let selection: SessionTaxonomy
 
+    /// Contributor name (same `@AppStorage` key the Settings screen writes
+    /// to). We gate the Record button on this being non-empty so every
+    /// session we upload is properly attributed.
+    @AppStorage(CampaignConfig.userNameStorageKey) private var userName = ""
+
+    /// Drives the modal alert that collects the missing full name when the
+    /// contributor tries to record without having filled Settings yet.
+    @State private var showingNamePrompt = false
+
+    /// Scratch buffer for the alert's `TextField`. Copied into ``userName``
+    /// only once the contributor taps Continue with a non-empty value.
+    @State private var pendingName = ""
+
+    /// Programmatic navigation flag: flipped to `true` after we've
+    /// confirmed a name is present (either already in storage or just
+    /// captured via the alert). Using a flag keeps the "collect name →
+    /// push" sequence in one place instead of duplicating NavigationLinks.
+    @State private var navigateToRecording = false
+
     var body: some View {
         ZStack {
             AmbientImageBackdrop()
@@ -25,7 +44,7 @@ struct ActivityBriefingView: View {
 
             GlassPane {
                 VStack(spacing: 0) {
-                    BriefingHeader(title: selection.taskCategoryLabelPt)
+                    BriefingHeader(title: selection.taskCategoryLabelLocalized)
                         .padding(.top, 4)
 
                     Spacer(minLength: 12)
@@ -35,8 +54,8 @@ struct ActivityBriefingView: View {
 
                     Spacer()
 
-                    NavigationLink {
-                        RecordingView(taxonomy: selection)
+                    Button {
+                        handleRecordTap()
                     } label: {
                         KEPillButton(
                             label: "Record",
@@ -54,6 +73,39 @@ struct ActivityBriefingView: View {
         }
         .navigationBarHidden(true)
         .preferredColorScheme(.light)
+        .alert("Your name", isPresented: $showingNamePrompt) {
+            TextField("e.g. Marcos D", text: $pendingName)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled(true)
+            Button("Cancel", role: .cancel) {
+                pendingName = ""
+            }
+            Button("Continue") {
+                let trimmed = pendingName.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                userName = trimmed
+                pendingName = ""
+                navigateToRecording = true
+            }
+        } message: {
+            Text("Please enter your full name before recording. We use it to label the sessions you contribute.")
+        }
+        .navigationDestination(isPresented: $navigateToRecording) {
+            RecordingView(taxonomy: selection)
+        }
+    }
+
+    /// Checks whether we already have a contributor name stored. If yes,
+    /// pushes straight to the recorder; otherwise opens the alert with an
+    /// empty scratch buffer so the user is forced to fill it in.
+    private func handleRecordTap() {
+        let trimmed = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            pendingName = ""
+            showingNamePrompt = true
+        } else {
+            navigateToRecording = true
+        }
     }
 }
 
@@ -114,10 +166,10 @@ private struct BriefingSummary: View {
                 value: scenarioValue)
             row(icon: "mappin.and.ellipse",
                 title: "Location",
-                value: selection.locationLabelPt)
+                value: selection.locationLabelLocalized)
             row(icon: "tag.fill",
                 title: "Activity",
-                value: selection.taskCategoryLabelPt)
+                value: selection.taskCategoryLabelLocalized)
             row(icon: selection.timeOfDay == "day" ? "sun.max.fill" : "moon.stars.fill",
                 title: "Period",
                 value: periodValue)

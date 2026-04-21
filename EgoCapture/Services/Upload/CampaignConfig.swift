@@ -14,10 +14,33 @@ enum CampaignConfig {
     /// UserDefaults key backing the contributor name field in Settings.
     static let userNameStorageKey = "user_name"
 
+    /// UserDefaults key backing the contributor country field in Settings.
+    /// Same key `@AppStorage("country")` uses in ``SettingsView``.
+    static let countryStorageKey = "country"
+
     /// Raw contributor name as typed by the user. Empty if never set.
     static var userName: String {
         let raw = UserDefaults.standard.string(forKey: userNameStorageKey) ?? ""
         return raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Two-letter ISO region code for the contributor, uppercased.
+    ///
+    /// Resolution order:
+    /// 1. Value typed in Settings (trimmed + uppercased, first two chars).
+    /// 2. Device locale region (`Locale.current.region`).
+    /// 3. `"XX"` as a last-resort sentinel so the S3 key never collapses to
+    ///    a double slash or an empty path component.
+    static var countryCode: String {
+        let raw = UserDefaults.standard.string(forKey: countryStorageKey) ?? ""
+        let fromSettings = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if fromSettings.count >= 2 {
+            return String(fromSettings.prefix(2))
+        }
+        if let region = Locale.current.region?.identifier, region.count >= 2 {
+            return String(region.prefix(2)).uppercased()
+        }
+        return "XX"
     }
 
     /// Stable per-device identifier. Survives reinstalls as long as at least one
@@ -44,10 +67,13 @@ enum CampaignConfig {
         return "anon-\(tail)"
     }
 
-    /// S3 key prefix (without trailing slash) that groups every session produced
-    /// by this contributor under this campaign: `"EgoTeste-iOS/marcos-d"`.
+    /// S3 key prefix (without trailing slash) that groups every session
+    /// produced by this contributor under this campaign. The country code
+    /// sits between the campaign and the user slug so we can partition
+    /// uploads by region without touching each contributor's folder
+    /// structure. Example: `"EgoTeste-iOS/BR/marcos-d"`.
     static var s3Prefix: String {
-        "\(campaign)/\(userSlug)"
+        "\(campaign)/\(countryCode)/\(userSlug)"
     }
 
     /// Lower-cases, strips diacritics, and collapses non-alphanumerics into

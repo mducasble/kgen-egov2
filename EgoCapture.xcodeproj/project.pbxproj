@@ -69,6 +69,7 @@
 		AA000089 /* CampaignConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000089 /* CampaignConfig.swift */; };
 		AA000090 /* EGOTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000090 /* EGOTheme.swift */; };
 		AA000091 /* KGenEyeHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000091 /* KGenEyeHomeView.swift */; };
+		AA000117 /* KGenEyeLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000117 /* KGenEyeLogo.swift */; };
 		AA000092 /* Orbitron.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AB000092 /* Orbitron.ttf */; };
 		BA100001 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = BA100002 /* hand_landmarker.task */; };
 /* End PBXBuildFile section */
@@ -139,6 +140,7 @@
 		AB000089 /* CampaignConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampaignConfig.swift; sourceTree = "<group>"; };
 		AB000090 /* EGOTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EGOTheme.swift; sourceTree = "<group>"; };
 		AB000091 /* KGenEyeHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KGenEyeHomeView.swift; sourceTree = "<group>"; };
+		AB000117 /* KGenEyeLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KGenEyeLogo.swift; sourceTree = "<group>"; };
 		AB000092 /* Orbitron.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/Orbitron.ttf; sourceTree = "<group>"; };
 		AC000001 /* EgoCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EgoCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA100002 /* hand_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = hand_landmarker.task; sourceTree = "<group>"; };
@@ -269,6 +271,7 @@
 				AB000005 /* SettingsView.swift */,
 				AB000006 /* CameraPreviewView.swift */,
 				AB000091 /* KGenEyeHomeView.swift */,
+				AB000117 /* KGenEyeLogo.swift */,
 				AB000112 /* TaxonomyPickerView.swift */,
 				AB000103 /* ActivityBriefingView.swift */,
 				AB000105 /* LoginView.swift */,
@@ -482,6 +485,7 @@
 				AA000001 /* EgoCaptureApp.swift in Sources */,
 				AA000090 /* EGOTheme.swift in Sources */,
 				AA000091 /* KGenEyeHomeView.swift in Sources */,
+				AA000117 /* KGenEyeLogo.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
 				AA000003 /* RecordingView.swift in Sources */,
 				AA000004 /* SessionListView.swift in Sources */,

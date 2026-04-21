@@ -82,6 +82,15 @@ struct Taxonomy: Codable, Hashable {
 
         var id: String { code }
 
+        /// Display-ready label resolved through the `Localizable.xcstrings`
+        /// key `location.<code>`. Falls back to ``labelPt`` when the key is
+        /// missing from the catalog, so new codes still render before the
+        /// catalog is updated. `labelPt` remains the canonical serialised
+        /// label that goes into `taxonomy.json` next to the bucket.
+        var localizedLabel: String {
+            TaxonomyLocalization.resolve(key: "location.\(code)", fallback: labelPt)
+        }
+
         enum CodingKeys: String, CodingKey {
             case code
             case labelPt = "label_pt"
@@ -100,6 +109,13 @@ struct Taxonomy: Codable, Hashable {
 
         var id: String { code }
 
+        /// Display-ready label resolved through the `Localizable.xcstrings`
+        /// key `task.<code>`, with ``labelPt`` as the fallback. See
+        /// ``Location/localizedLabel`` for the same rationale.
+        var localizedLabel: String {
+            TaxonomyLocalization.resolve(key: "task.\(code)", fallback: labelPt)
+        }
+
         enum CodingKeys: String, CodingKey {
             case code
             case labelPt = "label_pt"
@@ -107,6 +123,20 @@ struct Taxonomy: Codable, Hashable {
             case description
             case group
         }
+    }
+}
+
+// MARK: - Localization helper
+
+/// Thin wrapper around `Bundle.localizedString(forKey:value:table:)` that
+/// treats the fallback as both the "value if missing" and the returned
+/// string when no translation exists for the current locale. The built-in
+/// `String(localized:)` APIs require the key to be a `StaticString`, which
+/// doesn't work for dynamic keys like `location.\(code)`.
+enum TaxonomyLocalization {
+    static func resolve(key: String, fallback: String) -> String {
+        let translated = Bundle.main.localizedString(forKey: key, value: fallback, table: nil)
+        return translated
     }
 }
 
