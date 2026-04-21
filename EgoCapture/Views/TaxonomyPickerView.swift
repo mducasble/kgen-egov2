@@ -121,8 +121,22 @@ struct TaskCategoryPickerView: View {
     let scenarioBucket: Taxonomy.BinaryScenario
     let location: Taxonomy.Location
 
+    /// Temporary product filter (all locales): whole groups hidden from step 3
+    /// until we re-enable Alimentação, cuidado pessoal, cuidado com outros,
+    /// deslocamento, social, produtivo e recreação.
+    private static let hiddenTaskGroupCodes: Set<String> = [
+        "food",
+        "self_care",
+        "caregiving",
+        "mobility",
+        "social",
+        "productive",
+        "recreation",
+    ]
+
     private var grouped: [(group: String, items: [Taxonomy.TaskCategory])] {
         let all = TaxonomyLoader.shared.taskCategories
+            .filter { !Self.hiddenTaskGroupCodes.contains($0.group) }
         let groups = Dictionary(grouping: all, by: { $0.group })
         let order = uniqueGroupOrder(all)
         return order.compactMap { key in
