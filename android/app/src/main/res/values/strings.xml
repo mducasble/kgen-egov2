@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KGeN Eye</string>
+    <string name="shell_subtitle">Android client — align session layout and S3 rules with the iOS EgoCapture app.</string>
+</resources>
