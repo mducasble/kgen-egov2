@@ -2,4 +2,13 @@
 <resources>
     <string name="app_name">KGeN Eye</string>
     <string name="shell_subtitle">Android client — align session layout and S3 rules with the iOS EgoCapture app.</string>
+    <string name="open_recorder">Open recorder</string>
+    <string name="start_recording">Start recording</string>
+    <string name="stop_recording">Stop recording</string>
+    <string name="recording_status_idle">Idle — press to start.</string>
+    <string name="recording_status_active">Recording…</string>
+    <string name="recording_saved">Saved %1$s</string>
+    <string name="recording_error">Recorder error: %1$s</string>
+    <string name="permission_required">Camera and microphone permissions are required to record.</string>
+    <string name="permission_open_settings">Open settings</string>
 </resources>
