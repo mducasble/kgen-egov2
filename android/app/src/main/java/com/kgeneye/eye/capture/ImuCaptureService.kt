@@ -51,6 +51,15 @@ class ImuCaptureService(context: Context) : SensorEventListener {
     private var startupDiscarded = 0
     private var previousSampleNs: Long? = null
 
+    /**
+     * Monotonic-ns timestamps of every emitted sample. Mirrors iOS'
+     * `IMUCaptureService.allTimestampsNs` and is consumed by
+     * `SyncAnalysis.computeIMUVideoSync` at finalize time. Capped to a few
+     * MB at 100 Hz × multi-hour sessions, but keeping it in memory simplifies
+     * the post-capture sync computation.
+     */
+    private val timestampsNs = ArrayList<Long>(8 * 1024)
+
     private var continuousDurationSec = 0.0
     private var continuousIntervalCount = 0
     private var intervalSumMs = 0.0
@@ -82,6 +91,11 @@ class ImuCaptureService(context: Context) : SensorEventListener {
     val startupDiscardedCount: Int get() = startupDiscarded
     val lagEvents: Int get() = lagEventCount
 
+    /** Snapshot of every recorded sample's monotonic timestamp (ns). */
+    fun allTimestampsNs(): LongArray {
+        synchronized(timestampsNs) { return timestampsNs.toLongArray() }
+    }
+
     /** `true` when the device exposes both sensors that IMU export requires. */
     val isAvailable: Boolean get() = accelSensor != null && gyroSensor != null
 
@@ -107,6 +121,7 @@ class ImuCaptureService(context: Context) : SensorEventListener {
         maxGapMs = 0.0
         lagEventCount = 0
         haveGyro = false
+        synchronized(timestampsNs) { timestampsNs.clear() }
 
         sensorManager.registerListener(this, accelSensor, TARGET_INTERVAL_US, h)
         sensorManager.registerListener(this, gyroSensor, TARGET_INTERVAL_US, h)
@@ -168,6 +183,7 @@ class ImuCaptureService(context: Context) : SensorEventListener {
         val azG = event.values[2].toDouble() / GRAVITY
 
         writeSample(epochMs, relativeMs, sampleNs, axG, ayG, azG, lastGyroX, lastGyroY, lastGyroZ)
+        synchronized(timestampsNs) { timestampsNs.add(sampleNs) }
         sampleCount += 1
     }
 

@@ -24,12 +24,25 @@ class VideoTimestampsService {
     private var frameIndex: Int = 0
     private val active = AtomicBoolean(false)
 
+    /**
+     * In-memory mirror of every recorded frame timestamp (ns). Kept so
+     * `SyncAnalysis` can run a nearest-neighbor sync check against the IMU
+     * stream at finalize time, mirroring the iOS pipeline.
+     */
+    private val timestampsNs = ArrayList<Long>(4 * 1024)
+
     val frameCount: Int get() = frameIndex
+
+    /** Snapshot of every recorded frame timestamp (monotonic ns). */
+    fun allTimestampsNs(): LongArray {
+        synchronized(timestampsNs) { return timestampsNs.toLongArray() }
+    }
 
     fun start(outputFile: File) {
         writer = BufferedWriter(FileWriter(outputFile, false))
         startNs = clock.nowNs()
         frameIndex = 0
+        synchronized(timestampsNs) { timestampsNs.clear() }
         active.set(true)
     }
 
@@ -53,13 +66,15 @@ class VideoTimestampsService {
         val ts = image.imageInfo.timestamp
         val epochMs = clock.toEpochMs(ts)
         val relMs = clock.toRelativeMs(ts, startNs)
+        val presentationTimeSec = ts.toDouble() / 1_000_000_000.0
         try {
             w.append(
-                """{"frameIndex":$frameIndex,"timestampNs":$ts,"timestampEpochMs":$epochMs,"relativeMs":$relMs}""" + "\n"
+                """{"clock":"${clock.clockName}","frameIndex":$frameIndex,"isEstimated":false,"presentationTimeSec":$presentationTimeSec,"relativeMs":$relMs,"timestampEpochMs":$epochMs,"timestampNs":$ts}""" + "\n"
             )
         } catch (t: Throwable) {
             Log.w(TAG, "video timestamp write failed: ${t.message}")
         }
+        synchronized(timestampsNs) { timestampsNs.add(ts) }
         frameIndex += 1
     }
 

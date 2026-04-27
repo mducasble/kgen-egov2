@@ -26,6 +26,7 @@ object SessionFiles {
         "metadata" to "json",
         "taxonomy" to "json",
         "technical_validation" to "json",
+        "chunk_manifest" to "json",
         "session_manifest" to "json",
         "camera_format_diagnostics" to "json",
         "imu_intrinsics" to "json",
