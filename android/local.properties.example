@@ -1,0 +1,5 @@
+# Copy these auth values into android/local.properties.
+# Keep existing sdk.dir if Android Studio generated it.
+KGEN_AUTH_BASE=https://wvsixcvsfndhoygbkzkj.supabase.co/functions/v1/auth-mobile
+KGEN_APP_KEY=<MOBILE_APP_KEY>
+GOOGLE_WEB_CLIENT_ID=<web-client-id>

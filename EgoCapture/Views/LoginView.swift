@@ -2,17 +2,23 @@ import SwiftUI
 
 // MARK: - Login view
 
-/// Dummy auth screen. Both `Log in` and `Continue with Google` trigger the
-/// same `onAuthenticated` callback; the root view then swaps in
-/// `KGenEyeHomeView`. No validation / Google SDK / backend is wired yet —
-/// that work lands together with the real auth provider.
+/// Auth screen backed by the KGeN `auth-mobile` Edge Function. The visual
+/// treatment stays aligned with the original ambient glass mock, but actions
+/// now call email/password, signup and forgot-password.
 struct LoginView: View {
-    let onAuthenticated: () -> Void
+    @ObservedObject var auth: AuthViewModel
 
     @State private var email = ""
     @State private var password = ""
+    @State private var fullName = ""
+    @State private var country = ""
+    @State private var city = ""
+    @State private var referralCode = ""
+    @State private var mode: Mode = .login
+    @State private var isWorking = false
     @FocusState private var focus: Field?
 
+    private enum Mode { case login, signup }
     private enum Field { case email, password }
 
     var body: some View {
@@ -69,21 +75,68 @@ struct LoginView: View {
                         )
                         .focused($focus, equals: .password)
                         .submitLabel(.go)
-                        .onSubmit(authenticate)
+                        .onSubmit(submit)
+
+                        if mode == .signup {
+                            GlassField(
+                                placeholder: "Full name",
+                                text: $fullName,
+                                contentType: .name,
+                                keyboardType: .default,
+                                isSecure: false
+                            )
+                            GlassField(
+                                placeholder: "Country (BR)",
+                                text: $country,
+                                contentType: .countryName,
+                                keyboardType: .default,
+                                isSecure: false
+                            )
+                            GlassField(
+                                placeholder: "City",
+                                text: $city,
+                                contentType: .addressCity,
+                                keyboardType: .default,
+                                isSecure: false
+                            )
+                            GlassField(
+                                placeholder: "Referral code (optional)",
+                                text: $referralCode,
+                                contentType: nil,
+                                keyboardType: .default,
+                                isSecure: false
+                            )
+                        }
                     }
 
-                    LoginButton(action: authenticate)
+                    if let error = auth.errorMessage {
+                        Text(error)
+                            .font(.system(size: 13, weight: .medium))
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(KE.accentRed)
+                            .padding(.top, 10)
+                    }
+
+                    LoginButton(
+                        title: mode == .login ? "Log in" : "Create account",
+                        isWorking: isWorking,
+                        action: submit
+                    )
                         .padding(.top, 14)
 
-                    GoogleButton(action: authenticate)
-                        .padding(.top, 10)
-
                     Button("Forgot my password") {
-                        // Dummy: spec calls for a modal sheet but auth isn't
-                        // wired yet. Keeping as a no-op placeholder.
+                        forgotPassword()
                     }
                     .buttonStyle(ForgotLinkStyle())
                     .padding(.top, 18)
+
+                    Button(mode == .login ? "Need an account? Sign up" : "Already have an account? Log in") {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            mode = mode == .login ? .signup : .login
+                        }
+                    }
+                    .buttonStyle(ForgotLinkStyle())
+                    .padding(.top, 10)
 
                     Spacer(minLength: 24)
 
@@ -104,11 +157,40 @@ struct LoginView: View {
         .onTapGesture { focus = nil }
     }
 
-    private func authenticate() {
+    private func submit() {
         focus = nil
-        withAnimation(.easeInOut(duration: 0.35)) {
-            onAuthenticated()
+        guard !isWorking else { return }
+        isWorking = true
+        Task {
+            if mode == .login {
+                await auth.login(email: email, password: password)
+            } else {
+                await auth.signup(
+                    email: email,
+                    password: password,
+                    fullName: fullName.nilIfBlank,
+                    country: country.nilIfBlank,
+                    city: city.nilIfBlank,
+                    referralCode: referralCode.nilIfBlank
+                )
+            }
+            isWorking = false
         }
+    }
+
+    private func forgotPassword() {
+        guard !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            auth.errorMessage = "Enter your email first."
+            return
+        }
+        Task { await auth.forgotPassword(email: email) }
+    }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let value = trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 }
 
@@ -160,11 +242,13 @@ private struct GlassField: View {
 // MARK: - Primary login button
 
 private struct LoginButton: View {
+    let title: String
+    let isWorking: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text("Log in")
+            Text(isWorking ? "Please wait..." : title)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(KE.ink1)
                 .frame(maxWidth: .infinity, minHeight: 56)
@@ -189,63 +273,7 @@ private struct LoginButton: View {
                         radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Google button (placeholder glyph)
-
-private struct GoogleButton: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                GoogleGlyph()
-                    .frame(width: 20, height: 20)
-
-                Text("Continue with Google")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(KE.ink1)
-            }
-            .frame(maxWidth: .infinity, minHeight: 56)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.55),
-                        Color(red: 240/255, green: 245/255, blue: 252/255).opacity(0.32)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.55), lineWidth: 1.5)
-            )
-            .shadow(
-                color: Color(red: 30/255, green: 45/255, blue: 65/255).opacity(0.10),
-                radius: 10, x: 0, y: 4
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-/// Placeholder Google mark — single-color "G" in Google Blue over a white
-/// disc. Swap to the official multi-color SDK asset once the GoogleSignIn
-/// integration lands.
-private struct GoogleGlyph: View {
-    var body: some View {
-        ZStack {
-            Circle().fill(Color.white)
-            Text("G")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(Color(red: 66/255, green: 133/255, blue: 244/255))
-        }
-        .overlay(Circle().strokeBorder(Color.white.opacity(0.6), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.12), radius: 1.5, y: 0.5)
+        .disabled(isWorking)
     }
 }
 
@@ -270,5 +298,5 @@ private struct ForgotLinkStyle: ButtonStyle {
 }
 
 #Preview {
-    LoginView(onAuthenticated: {})
+    LoginView(auth: AuthViewModel())
 }

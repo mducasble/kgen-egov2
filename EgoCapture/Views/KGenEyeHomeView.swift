@@ -268,12 +268,7 @@ struct BrandLockup: View {
 
 // MARK: - Backdrop
 //
-// The design handoff ships with a static photograph (`bg-kitchen.jpg`) that
-// stands in for the camera feed. Using it instead of a live `AVCaptureSession`
-// keeps the Home screen fast, avoids requesting camera permission just to
-// show a background, and matches the mockups exactly.
-
-/// Static photographic backdrop used by every Home/nav scene.
+/// Photographic backdrop used by every Home/nav scene.
 ///
 /// SwiftUI's `Image.scaledToFill()` does *not* clip overflow by default, so
 /// we pin the image to a `GeometryReader`-measured frame and clip it
@@ -288,7 +283,7 @@ struct AmbientImageBackdrop: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                Image("bg-kitchen")
+                Image("ambient-bg")
                     .resizable()
                     .scaledToFill()
                     .frame(width: proxy.size.width, height: proxy.size.height)
@@ -357,6 +352,8 @@ struct GlassCard<Content: View>: View {
 // MARK: - Home view
 
 struct KGenEyeHomeView: View {
+    @Environment(\.authViewModel) private var auth
+
     /// The pane's insets + corner radius. Duplicated here so the masked
     /// "extra blur" layer behind the glass lines up pixel-perfect with the
     /// `GlassPane` on top — both use the same padding and rounded rect.
@@ -435,6 +432,17 @@ struct KGenEyeHomeView: View {
                                 KEPillButton(
                                     label: "Settings",
                                     systemImage: "gearshape.fill",
+                                    variant: .ghost
+                                )
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                auth?.logout()
+                            } label: {
+                                KEPillButton(
+                                    label: "Sign Out",
+                                    systemImage: "rectangle.portrait.and.arrow.right",
                                     variant: .ghost
                                 )
                             }

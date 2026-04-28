@@ -1,8 +1,25 @@
+import java.io.InputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
+
+val localProps = Properties()
+run {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { stream: InputStream -> localProps.load(stream) }
+    }
+}
+
+fun localProp(name: String, defaultValue: String = ""): String =
+    (localProps.getProperty(name) ?: defaultValue)
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
 
 android {
     namespace = "com.kgeneye.eye"
@@ -14,6 +31,14 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField(
+            "String",
+            "KGEN_AUTH_BASE",
+            "\"${localProp("KGEN_AUTH_BASE", "https://wvsixcvsfndhoygbkzkj.supabase.co/functions/v1/auth-mobile")}\"",
+        )
+        buildConfigField("String", "KGEN_APP_KEY", "\"${localProp("KGEN_APP_KEY")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProp("GOOGLE_WEB_CLIENT_ID")}\"")
     }
 
     buildTypes {
@@ -38,10 +63,7 @@ android {
     buildFeatures {
         viewBinding = true
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
+        buildConfig = true
     }
 
     packaging {
@@ -56,6 +78,10 @@ android {
                 "META-INF/INDEX.LIST",
             )
         }
+    }
+
+    androidResources {
+        noCompress += "task"
     }
 }
 
@@ -89,10 +115,24 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
+    // Auth gateway + Google Sign-In via Credential Manager.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
+    // Post-capture hand/face presence analysis.
+    implementation("com.google.mediapipe:tasks-vision:0.10.14")
+
     // AWS SDK for Kotlin — S3 uploads with SigV4 handled by the SDK.
     implementation("aws.sdk.kotlin:s3:1.3.36")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     testImplementation("junit:junit:4.13.2")
+
+    // Coil + SVG decoder so the KGeN Eye wordmark can ship as a single SVG
+    // resource (shares the exact artwork with the iOS Asset Catalog).
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-svg:2.6.0")
 }

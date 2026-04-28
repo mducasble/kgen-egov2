@@ -75,6 +75,12 @@ final class SessionPackagingService {
             return ("json", "Taxonomy selection (viewpoint, scenario, location, task) plus auto-detected day/night. Out-of-MCAP annotation.", nil)
         case "imu_intrinsics" where ext == "json":
             return ("json", ImuIntrinsics.manifestArtifactDescription, nil)
+        case "hand_landmarks" where ext == "jsonl":
+            return ("jsonl", "Post-capture hand presence and 21-point landmarks sampled from the video", countLines(at: url))
+        case "face_presence" where ext == "jsonl":
+            return ("jsonl", "Post-capture face presence checks for privacy/QC", countLines(at: url))
+        case "frame_qc_metrics" where ext == "jsonl":
+            return ("jsonl", "Post-capture frame brightness, blur, hand presence, and face presence metrics", countLines(at: url))
         default:
             return (ext, "Additional artifact", nil)
         }

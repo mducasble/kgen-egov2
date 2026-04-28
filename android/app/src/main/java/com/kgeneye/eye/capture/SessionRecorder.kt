@@ -456,6 +456,20 @@ class SessionRecorder(private val context: Context) {
         } catch (t: Throwable) { Log.e(TAG, "technical_validation write failed", t) }
 
         try {
+            val vision = PostCaptureVisionAnalyzer.analyze(
+                context = context,
+                videoFile = videoFile,
+                sessionDir = session.directory,
+                recordingStartEpochMs = recordingStartEpochMs,
+                timestampsNs = videoTsNs,
+            )
+            Log.i(
+                TAG,
+                "post-capture QC analyzed ${vision.frameQcRows} frames; hands frames=${vision.framesWithHands}, total hands=${vision.totalHandsDetected}, hand detector ready=${vision.handDetectorReady}, hand rows=${vision.handRows}, face rows=${vision.faceRows}",
+            )
+        } catch (t: Throwable) { Log.e(TAG, "post-capture vision analysis failed", t) }
+
+        try {
             ChunkManifestWriter.write(
                 sessionDir = session.directory,
                 sessionId = session.id,
@@ -557,7 +571,7 @@ class SessionRecorder(private val context: Context) {
             Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
         } catch (_: Throwable) { "" }
         return SessionWriter.CollectorInfo(
-            campaign = settings.campaign,
+            campaign = CampaignConfig.CAMPAIGN,
             collectorId = vendorId,
             userName = settings.contributorName,
             userSlug = CampaignConfig.userSlug(settings, context),

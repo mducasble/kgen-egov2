@@ -1,4 +1,5 @@
 import SwiftUI
+import GoogleSignIn
 import UIKit
 
 final class OrientationLock {
@@ -22,6 +23,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> UIInterfaceOrientationMask {
         OrientationLock.shared.mask
     }
+
+    func application(
+        _ app: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        GoogleAuthService.handle(url: url)
+    }
 }
 
 @main
@@ -35,32 +44,26 @@ struct EgoCaptureApp: App {
     }
 }
 
-/// Top-level view switcher between the dummy `LoginView` and the real
-/// `KGenEyeHomeView`. Auth is purely cosmetic for now — the real wiring
-/// (Keychain persistence, Google SDK, backend call) lands alongside the
-/// auth provider integration.
-///
-/// TEMPORARY: the Login screen is disabled until auth is wired. Flip
-/// ``loginEnabled`` back to ``true`` (and revert the ``isAuthenticated``
-/// initial value) to re-enable the flow. ``LoginView`` itself is kept
-/// compiled so the design doesn't bit-rot.
+/// Top-level view switcher between real auth and the capture workflow.
 private struct RootView: View {
-    private static let loginEnabled = false
-
-    @State private var isAuthenticated = !RootView.loginEnabled
+    @StateObject private var auth = AuthViewModel()
 
     var body: some View {
         ZStack {
-            if isAuthenticated {
+            switch auth.state {
+            case .loading:
+                ProgressView()
+                    .tint(KE.accentBlue)
+            case .signedIn:
                 KGenEyeHomeView()
+                    .environment(\.authViewModel, auth)
                     .transition(.opacity)
-            } else {
-                LoginView(onAuthenticated: {
-                    isAuthenticated = true
-                })
-                .transition(.opacity)
+            case .signedOut:
+                LoginView(auth: auth)
+                    .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.35), value: isAuthenticated)
+        .task { await auth.bootstrap() }
+        .animation(.easeInOut(duration: 0.35), value: auth.state)
     }
 }

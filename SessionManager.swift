@@ -76,9 +76,14 @@ enum SessionFiles {
         ("imu",                        "jsonl"),
         ("video_timestamps",           "jsonl"),
         ("metadata",                   "json"),
+        ("taxonomy",                   "json"),
         ("technical_validation",       "json"),
         ("session_manifest",           "json"),
         ("camera_format_diagnostics",  "json"),
+        ("imu_intrinsics",             "json"),
+        ("hand_landmarks",             "jsonl"),
+        ("face_presence",              "jsonl"),
+        ("frame_qc_metrics",           "jsonl"),
     ]
 
     /// Dynamic metadata filename list for upload, tailored to the session's code.

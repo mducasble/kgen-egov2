@@ -73,10 +73,7 @@ object UploadStateStore {
         val s3Base = "$collectorId/$sessionId"
         val entries = mutableListOf<UploadState.FileEntry>()
 
-        val uploadableBases = SessionFiles.metadataBases + listOf(
-            "video" to "mp4",
-            "video_timestamps" to "jsonl",
-        )
+        val uploadableBases = SessionFiles.metadataBases + listOf("video" to "mp4")
         for ((base, ext) in uploadableBases) {
             val f = SessionFiles.file(base, ext, sessionDir)
             if (!f.exists()) continue

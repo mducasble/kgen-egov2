@@ -54,12 +54,12 @@ class UploadManager private constructor(private val context: Context) {
         scope.launch {
             tasksMutex.withLock {
                 if (tasks[sessionId] != null) return@launch
-                val settings = appSettings.state.value
-                val config = S3Config.from(settings)
+                val config = S3Config.embedded()
                 if (!config.isValid) {
-                    Log.i(TAG, "S3 credentials missing — skipping $sessionId")
+                    Log.w(TAG, "Embedded S3 credentials are blank — refusing to upload $sessionId")
                     return@launch
                 }
+                val settings = appSettings.state.value
                 val collectorId = CampaignConfig.s3Prefix(settings, context)
                 val job = scope.launch { runPipeline(sessionId, sessionDir, collectorId, config) }
                 tasks[sessionId] = job
@@ -77,12 +77,13 @@ class UploadManager private constructor(private val context: Context) {
                 if (tasks[sessionId] != null) return@launch
                 val sessionDir = File(sessionManager.sessionsRoot, sessionId)
                 val state = UploadStateStore.load(sessionDir) ?: return@launch
-                val settings = appSettings.state.value
-                val config = S3Config.from(settings)
+                val config = S3Config.embedded()
                 if (!config.isValid) return@launch
 
                 state.files.forEach { entry ->
-                    if (entry.status == UploadState.FileEntry.FileStatus.failed) {
+                    if (entry.status == UploadState.FileEntry.FileStatus.failed ||
+                        entry.status == UploadState.FileEntry.FileStatus.uploading
+                    ) {
                         entry.status = UploadState.FileEntry.FileStatus.pending
                         entry.attempts = 0
                         entry.lastError = null
@@ -104,8 +105,7 @@ class UploadManager private constructor(private val context: Context) {
     /** Scan disk on launch and resume any session that was mid-upload. */
     fun resumePendingUploads() {
         scope.launch {
-            val settings = appSettings.state.value
-            val config = S3Config.from(settings)
+            val config = S3Config.embedded()
             if (!config.isValid) return@launch
             delay(500)
             for (session in sessionManager.listSessions()) {
@@ -143,6 +143,21 @@ class UploadManager private constructor(private val context: Context) {
     private suspend fun uploadFiles(sessionId: String, sessionDir: File, config: S3Config) {
         val state = UploadStateStore.load(sessionDir) ?: return
         val uploader = S3UploadService(config)
+
+        // A process can die while a large file (usually video) is marked as
+        // `uploading`. On the next run there is no active network request, so
+        // that persisted state must be treated as resumable work.
+        var resetStaleUploading = false
+        state.files.forEach { entry ->
+            if (entry.status == UploadState.FileEntry.FileStatus.uploading) {
+                entry.status = UploadState.FileEntry.FileStatus.pending
+                resetStaleUploading = true
+            }
+        }
+        if (resetStaleUploading) {
+            UploadStateStore.save(state, sessionDir)
+            publish(state)
+        }
 
         for (entry in state.files) {
             if (entry.status != UploadState.FileEntry.FileStatus.pending) continue

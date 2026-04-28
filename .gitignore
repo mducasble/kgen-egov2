@@ -16,6 +16,9 @@ DerivedData/
 # Cursor local state
 .cursor/
 
+# Local auth secrets
+Config/Secrets.xcconfig
+
 # Serverless Lambda build + virtualenv artefacts
 serverless/.venv/
 serverless/.aws-sam/
@@ -26,3 +29,10 @@ serverless/*.zip
 # blocks pushes and AWS auto-disables leaked keys). Use the `.example` file
 # as a template.
 EgoCapture/Services/Upload/EmbeddedAWSSecrets.swift
+android/app/src/main/java/com/kgeneye/eye/upload/EmbeddedAwsSecrets.kt
+
+# Android build artefacts
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

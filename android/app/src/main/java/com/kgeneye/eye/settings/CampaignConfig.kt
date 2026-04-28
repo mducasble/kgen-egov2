@@ -10,11 +10,11 @@ import java.util.Locale
  * `CampaignConfig` so uploads from both apps end up inside a consistent
  * campaign/country/contributor folder layout.
  *
- * The Android client defaults to `EgoTeste-Android` to keep its first uploads
- * separate from the iOS testing campaign; the operator can override this in
- * Settings.
+ * Campaign is fixed for the current collection so Android and iOS land under
+ * the same S3 campaign prefix.
  */
 object CampaignConfig {
+    const val CAMPAIGN = "EgoTeste-iOS"
 
     /** Two-letter ISO region uppercased; falls back to device locale then `XX`. */
     fun countryCode(settings: AppSettings.Snapshot): String {
@@ -36,9 +36,9 @@ object CampaignConfig {
         return "anon-$tail"
     }
 
-    /** Example: `EgoTeste-Android/BR/marcos-d`. */
+    /** Example: `EgoTeste-iOS/BR/marcos-d`. */
     fun s3Prefix(settings: AppSettings.Snapshot, context: Context): String =
-        "${settings.campaign}/${countryCode(settings)}/${userSlug(settings, context)}"
+        "$CAMPAIGN/${countryCode(settings)}/${userSlug(settings, context)}"
 
     /** Lower-cases, strips diacritics, collapses non-alphanumerics to single hyphens (cap 40). */
     fun slugify(input: String): String {

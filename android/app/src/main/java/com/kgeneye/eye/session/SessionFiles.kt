@@ -30,5 +30,8 @@ object SessionFiles {
         "session_manifest" to "json",
         "camera_format_diagnostics" to "json",
         "imu_intrinsics" to "json",
+        "hand_landmarks" to "jsonl",
+        "face_presence" to "jsonl",
+        "frame_qc_metrics" to "jsonl",
     )
 }

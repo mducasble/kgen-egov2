@@ -138,6 +138,12 @@ object SessionWriter {
                 Triple("json", "Additional artifact", null)
             base == "imu_intrinsics" && ext == "json" ->
                 Triple("json", "Additional artifact", null)
+            base == "hand_landmarks" && ext == "jsonl" ->
+                Triple("jsonl", "Post-capture hand presence and 21-point landmarks sampled from the video", countLines(file))
+            base == "face_presence" && ext == "jsonl" ->
+                Triple("jsonl", "Post-capture face presence checks for privacy/QC", countLines(file))
+            base == "frame_qc_metrics" && ext == "jsonl" ->
+                Triple("jsonl", "Post-capture frame brightness, blur, hand presence, and face presence metrics", countLines(file))
             base == "thumbnail" && ext == "jpg" ->
                 Triple("jpeg", "Additional artifact", null)
             base == "session_manifest" && ext == "json" ->

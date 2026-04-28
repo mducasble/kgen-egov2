@@ -14,12 +14,27 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>GIDClientID</key>
+	<string>$(GOOGLE_CLIENT_ID)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>KGEN_APP_KEY</key>
+	<string>$(KGEN_APP_KEY)</string>
+	<key>KGEN_AUTH_BASE</key>
+	<string>$(KGEN_AUTH_BASE)</string>
 	<key>NSCameraUsageDescription</key>
 	<string>EgoCapture needs camera access to record egocentric video for AI training data collection.</string>
 	<key>NSMicrophoneUsageDescription</key>

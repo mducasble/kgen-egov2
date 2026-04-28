@@ -164,6 +164,18 @@ final class RecordingOrchestrator: ObservableObject {
             do { let w = try JSONLWriter(fileURL: SessionFiles.url("video_timestamps", "jsonl", in: dir)); for t in videoTS { w.append(t) }; w.close() } catch {}
         }
 
+        if let videoURL = SessionFiles.resolveExisting("video", "mp4", in: dir) {
+            let visionResult = await PostCaptureVisionAnalyzer.analyze(
+                videoURL: videoURL,
+                sessionDir: dir,
+                recordingStartEpochMs: recordingStartEpochMs,
+                videoTimestamps: videoTS
+            )
+            if visionResult.frameQcRows > 0 {
+                print("[Orchestrator] Post-capture QC analyzed \(visionResult.frameQcRows) frames; hands rows=\(visionResult.handRows), face rows=\(visionResult.faceRows)")
+            }
+        }
+
         let imuVideoSync = SyncAnalysisService.computeIMUVideoSync(
             videoTimestamps: videoTS,
             imuTimestampsNs: imuCaptureService?.allTimestampsNs ?? []

@@ -19,6 +19,9 @@ struct SettingsView: View {
 
     @AppStorage(CampaignConfig.userNameStorageKey) private var userName = ""
 
+    @State private var taxonomyBackfillMessage: String?
+    @State private var showTaxonomyBackfillAlert = false
+
     var body: some View {
         ZStack {
             AmbientImageBackdrop()
@@ -40,6 +43,11 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .toolbarBackground(.hidden, for: .navigationBar)
         .preferredColorScheme(.light)
+        .alert("Taxonomy upload", isPresented: $showTaxonomyBackfillAlert, actions: {
+            Button("OK", role: .cancel) {}
+        }, message: {
+            Text(taxonomyBackfillMessage ?? "")
+        })
     }
 
     // MARK: - Sections
@@ -48,7 +56,7 @@ struct SettingsView: View {
         let trimmed = userName.trimmingCharacters(in: .whitespacesAndNewlines)
         let slug = CampaignConfig.slugify(trimmed)
         let effectiveSlug = slug.isEmpty ? CampaignConfig.userSlug : slug
-        let previewPrefix = "\(CampaignConfig.campaign)/\(effectiveSlug)"
+        let previewPrefix = "\(CampaignConfig.countryCode)/\(effectiveSlug)"
 
         return GlassSection(title: "CONTRIBUTOR", icon: "person.crop.circle") {
             VStack(alignment: .leading, spacing: 12) {
@@ -70,22 +78,12 @@ struct SettingsView: View {
                         .autocorrectionDisabled(true)
                 }
 
-                HStack {
-                    Text("Campaign")
-                        .font(.subheadline)
-                        .foregroundStyle(KE.ink2)
-                    Spacer()
-                    Text(CampaignConfig.campaign)
-                        .font(.subheadline.monospaced())
-                        .foregroundStyle(KE.ink3)
-                }
-
                 VStack(alignment: .leading, spacing: 4) {
                     Text("S3 PATH PREFIX")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(KE.ink3)
                         .tracking(0.8)
-                    Text("\(previewPrefix)/<session-id>/…")
+                    Text("\(CampaignConfig.campaign)/\(previewPrefix)/<session-id>/…")
                         .font(.caption.monospaced())
                         .foregroundStyle(KE.ink1)
                         .textSelection(.enabled)
@@ -140,6 +138,28 @@ struct SettingsView: View {
                 Text("Sessions upload automatically after recording (≤2 min video chunks). Keys are not shown to contributors.")
                     .font(.caption2)
                     .foregroundStyle(KE.ink3.opacity(0.85))
+
+                if cfg.isValid {
+                    Button {
+                        let n = UploadManager.shared.backfillTaxonomyArtifacts()
+                        if n == 0 {
+                            taxonomyBackfillMessage = "No sessions needed a taxonomy upload (file missing locally, already queued, or already uploaded)."
+                        } else {
+                            taxonomyBackfillMessage = "Started taxonomy upload for \(n) session(s). Sessions that already uploaded taxonomy are skipped."
+                        }
+                        showTaxonomyBackfillAlert = true
+                    } label: {
+                        Label("Upload saved taxonomy JSON now", systemImage: "arrow.triangle.branch")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.borderless)
+                    .padding(.top, 4)
+
+                    Text("Use this if older builds did not upload taxonomy JSON. Sessions that already uploaded that file are skipped.")
+                        .font(.caption2)
+                        .foregroundStyle(KE.ink3.opacity(0.85))
+                }
             }
         }
     }

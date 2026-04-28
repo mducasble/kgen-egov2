@@ -87,6 +87,92 @@ final class UploadManager: ObservableObject {
         uploadTasks[sessionId] = task
     }
 
+    /// Enqueues upload of local taxonomy JSON (`taxonomy_<session>.json` or legacy `taxonomy.json`) for sessions
+    /// that already finished the pipeline before taxonomy was included in the upload manifest.
+    ///
+    /// Uses the session's saved `collectorId` from `upload_state.json` so keys match the original upload prefix.
+    ///
+    /// - Parameters:
+    ///   - sessionId: If non-nil, only that session; otherwise all session folders are scanned.
+    ///   - force: If true, re-uploads even when the file is already marked `.done` in state (overwrites S3).
+    /// - Returns: Number of sessions for which an upload task was started.
+    @discardableResult
+    func backfillTaxonomyArtifacts(sessionId: String? = nil, force: Bool = false) -> Int {
+        let config = S3Config.embedded()
+        guard config.isValid else {
+            print("[UploadManager] backfill taxonomy: S3 not configured")
+            return 0
+        }
+
+        var started = 0
+        for session in SessionManager.shared.listSessions() {
+            if let only = sessionId, only != session.id { continue }
+            guard uploadTasks[session.id] == nil else { continue }
+            let sessionDir = session.directory
+            guard var state = UploadStateManager.load(sessionDir: sessionDir) else { continue }
+            guard let taxURL = SessionFiles.resolveExisting("taxonomy", "json", in: sessionDir) else { continue }
+
+            let filename = taxURL.lastPathComponent
+            let s3Key = "\(state.collectorId)/\(state.sessionId)/\(filename)"
+            let sizeBytes = Self.localFileSize(at: taxURL)
+
+            var shouldRun = false
+            if let idx = state.files.firstIndex(where: { $0.filename == filename }) {
+                switch state.files[idx].status {
+                case .done:
+                    if force {
+                        state.files[idx].status = .pending
+                        state.files[idx].attempts = 0
+                        state.files[idx].lastError = nil
+                        state.files[idx].completedAt = nil
+                        shouldRun = true
+                    }
+                case .failed:
+                    state.files[idx].status = .pending
+                    state.files[idx].attempts = 0
+                    state.files[idx].lastError = nil
+                    shouldRun = true
+                case .pending, .uploading:
+                    break
+                }
+            } else {
+                state.files.append(
+                    UploadState.FileUploadEntry(
+                        filename: filename,
+                        s3Key: s3Key,
+                        sizeBytes: sizeBytes,
+                        status: .pending,
+                        attempts: 0,
+                        lastError: nil,
+                        completedAt: nil
+                    )
+                )
+                shouldRun = true
+            }
+
+            guard shouldRun else { continue }
+
+            state.status = .uploading
+            UploadStateManager.save(state, sessionDir: sessionDir)
+            activeUploads[session.id] = state
+
+            let sid = session.id
+            let dir = sessionDir
+            let task = Task {
+                await uploadFiles(sessionId: sid, sessionDir: dir, config: config)
+            }
+            uploadTasks[sid] = task
+            started += 1
+            print("[UploadManager] backfill taxonomy: started upload for \(sid) → \(filename)")
+        }
+        return started
+    }
+
+    private static func localFileSize(at url: URL) -> Int64 {
+        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+        return attrs?[.size] as? Int64 ?? 0
+    }
+
     /// Load upload state for display purposes.
     func loadState(sessionId: String) -> UploadState? {
         let sessionsRoot = SessionManager.shared.sessionsRoot

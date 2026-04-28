@@ -1,3 +1,4 @@
+import AVKit
 import SwiftUI
 import UIKit
 
@@ -334,10 +335,10 @@ private struct SessionUploadBadge: View {
             case .completed:
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 12))
-                    .foregroundStyle(KE.accentGreen)
+                    .foregroundStyle(SessionTone.green)
                 Text("Uploaded")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color(red: 70/255, green: 140/255, blue: 100/255))
+                    .foregroundStyle(SessionTone.green)
 
             case .uploading:
                 UploadProgressRing(progress: uploadProgress)
@@ -354,10 +355,10 @@ private struct SessionUploadBadge: View {
             case .failed, .partiallyFailed:
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 11))
-                    .foregroundStyle(KE.accentRed)
+                    .foregroundStyle(SessionTone.red)
                 Text("Failed · hold to retry")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(KE.accentRed)
+                    .foregroundStyle(SessionTone.red)
 
             case nil:
                 Image(systemName: "icloud.and.arrow.up")
@@ -510,10 +511,20 @@ private enum SessionPalette {
 
 // MARK: - Session Detail
 
+private enum SessionTone {
+    static let green = Color(red: 22/255, green: 105/255, blue: 72/255)
+    static let greenFill = Color(red: 12/255, green: 84/255, blue: 58/255).opacity(0.18)
+    static let amber = Color(red: 150/255, green: 94/255, blue: 8/255)
+    static let amberFill = Color(red: 150/255, green: 94/255, blue: 8/255).opacity(0.16)
+    static let red = Color(red: 145/255, green: 44/255, blue: 44/255)
+    static let redFill = Color(red: 145/255, green: 44/255, blue: 44/255).opacity(0.14)
+    static let blue = Color(red: 52/255, green: 88/255, blue: 130/255)
+}
+
 struct SessionDetailView: View {
     let sessionId: String
     let directory: URL
-    @State private var files: [(name: String, size: Int64, url: URL)] = []
+    @State private var summary: SessionDetailSummary = .empty
     @State private var isExportingZip = false
     @State private var shareURL: URL?
     @State private var exportError: String?
@@ -532,36 +543,12 @@ struct SessionDetailView: View {
 
             GlassPane {
                 ScrollView {
-                    VStack(spacing: 14) {
-                        GlassCard {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("SESSION ID")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(KE.ink3)
-                                    .tracking(0.8)
-
-                                Text(sessionId)
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(KE.ink1)
-                                    .textSelection(.enabled)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(16)
-                        }
-
-                        VStack(spacing: 8) {
-                            ForEach(files, id: \.name) { file in
-                                if isReadableJSONFile(file.name) {
-                                    NavigationLink {
-                                        JSONArtifactView(fileURL: file.url)
-                                    } label: {
-                                        artifactRow(file: file, tappable: true)
-                                    }
-                                } else {
-                                    artifactRow(file: file, tappable: false)
-                                }
-                            }
-                        }
+                    VStack(spacing: 16) {
+                        SessionVideoHeader(summary: summary)
+                        SessionScoreCard(summary: summary)
+                        QualityChecksCard(checks: summary.qualityChecks)
+                        RecordingStatsCard(stats: summary.recordingStats)
+                        RecordingStatusCard(summary: summary, sessionId: sessionId)
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 20)
@@ -573,7 +560,7 @@ struct SessionDetailView: View {
         .navigationTitle("Session")
         .toolbarBackground(.hidden, for: .navigationBar)
         .preferredColorScheme(.light)
-        .onAppear { loadFiles() }
+        .onAppear { loadSummary() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -642,13 +629,8 @@ struct SessionDetailView: View {
         }
     }
 
-    private func loadFiles() {
-        let fm = FileManager.default
-        guard let contents = try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.fileSizeKey]) else { return }
-        files = contents.map { url in
-            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
-            return (url.lastPathComponent, Int64(size), url)
-        }.sorted { $0.name < $1.name }
+    private func loadSummary() {
+        summary = SessionDetailSummary.load(sessionId: sessionId, directory: directory)
     }
 
     private func iconForFile(_ name: String) -> String {
@@ -691,6 +673,564 @@ struct SessionDetailView: View {
                 await MainActor.run { isExportingZip = false; exportError = error.localizedDescription }
             }
         }
+    }
+}
+
+// MARK: - Session Test Summary
+
+private struct SessionDetailSummary {
+    let title: String
+    let timestampText: String
+    let durationText: String
+    let fileSizeText: String
+    let score: Int
+    let scoreLabel: String
+    let scoreDetail: String
+    let videoURL: URL?
+    let s3Prefix: String?
+    let qualityChecks: [SessionCheck]
+    let recordingStats: [RecordingStat]
+
+    static let empty = SessionDetailSummary(
+        title: "Session",
+        timestampText: "n/a",
+        durationText: "n/a",
+        fileSizeText: "n/a",
+        score: 0,
+        scoreLabel: "Pending",
+        scoreDetail: "Session analysis has not been loaded yet.",
+        videoURL: nil,
+        s3Prefix: nil,
+        qualityChecks: [],
+        recordingStats: []
+    )
+
+    static func load(sessionId: String, directory: URL) -> SessionDetailSummary {
+        let metadata = readJSON(base: "metadata", ext: "json", in: directory)
+        let technical = readJSON(base: "technical_validation", ext: "json", in: directory)
+        let cameraDiagnostics = readJSON(base: "camera_format_diagnostics", ext: "json", in: directory)
+        let imuIntrinsics = readJSON(base: "imu_intrinsics", ext: "json", in: directory)
+        let qcReport = readJSON(base: "qc_report", ext: "json", in: directory)
+        let frameQCMetrics = readJSONLines(base: "frame_qc_metrics", ext: "jsonl", in: directory)
+        let manifest = readJSON(base: "session_manifest", ext: "json", in: directory)
+        let upload = UploadStateManager.load(sessionDir: directory)
+
+        let videoURL = SessionFiles.resolveExisting("video", "mp4", in: directory)
+        let fileSizeBytes = videoURL.flatMap { fileSize(at: $0) } ?? 0
+        let fileSizeText = ByteCountFormatter.string(fromByteCount: fileSizeBytes, countStyle: .file)
+        let startMs = metadata?.double("startTimeEpochMs")
+        let timestampDate = startMs.map { Date(timeIntervalSince1970: $0 / 1000.0) }
+            ?? (try? directory.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+            ?? Date()
+        let timestampText = Self.dateFormatter.string(from: timestampDate)
+        let title = metadata?.dict("environment")?.string("taskDescription")?.nilIfEmpty
+            ?? metadata?.dict("environment")?.string("subCategory")?.nilIfEmpty
+            ?? "Session \(sessionId)"
+
+        let video = metadata?.dict("videoMetrics") ?? technical?.dict("video")
+        let imu = metadata?.dict("imuMetrics") ?? technical?.dict("imu")
+        let sync = metadata?.dict("syncMetrics") ?? technical?.dict("timing")
+        let capture = metadata?.dict("capture")
+        let durationSec = metadata?.double("durationSec") ?? 0
+        let durationText = formatDuration(durationSec)
+        let fps = video?.double("actualAvgFPS") ?? video?.double("fps")
+        let dropped = video?.int("droppedFrames") ?? 0
+        let imuSamples = imu?.int("totalSamples") ?? 0
+        let imuRate = imu?.double("actualSampleRateHz") ?? imu?.double("sampleRateHz")
+        let maxDelta = sync?.double("observedMaxDeltaMs")
+
+        var qualityChecks: [SessionCheck] = []
+        var recordingStats: [RecordingStat] = []
+
+        var handRate = 0.0
+        var faceRate = 0.0
+        var brightness: Double?
+        var blur: Double?
+        let framesAnalyzed = frameQCMetrics.count
+        if !frameQCMetrics.isEmpty {
+            let total = Double(frameQCMetrics.count)
+            let handCount = frameQCMetrics.filter { $0.bool("handDetected") == true }.count
+            let faceCount = frameQCMetrics.filter { $0.bool("faceDetected") == true }.count
+            brightness = normalizeBrightness(average(frameQCMetrics.compactMap { $0.double("brightnessScore") }))
+            blur = normalizeSharpness(average(frameQCMetrics.compactMap { $0.double("blurScore") }))
+            handRate = Double(handCount) / total * 100.0
+            faceRate = Double(faceCount) / total * 100.0
+        }
+
+        let landscape = capture?.string("orientation")?.lowercased().contains("landscape") ?? true
+        let durationOk = durationSec >= 3
+        let lightingOk = (brightness ?? 70) >= 35
+        let stabilityOk = (fps ?? 0) >= 25 && dropped <= 5 && (maxDelta ?? 0) < 15
+        let sharpnessOk = (blur ?? 60) >= 40
+
+        qualityChecks.append(SessionCheck(icon: "hand.raised", title: "Hands Visible", value: handRate > 0 ? "\(Int(handRate.rounded()))% of frames" : "No hand detected", passed: handRate > 0))
+        qualityChecks.append(SessionCheck(icon: "shield.checkerboard", title: "Face Privacy", value: faceRate == 0 ? "No face detected" : "\(Int(faceRate.rounded()))% with face", passed: faceRate == 0))
+        qualityChecks.append(SessionCheck(icon: "iphone.landscape", title: "Orientation", value: landscape ? "Landscape" : "Not landscape", passed: landscape))
+        qualityChecks.append(SessionCheck(icon: "clock", title: "Duration", value: "\(durationText) recorded", passed: durationOk))
+        qualityChecks.append(SessionCheck(icon: "sun.max", title: "Lighting", value: brightness.map { "\($0.format0())/100" } ?? "Not analyzed", passed: lightingOk))
+        qualityChecks.append(SessionCheck(icon: "rectangle.dashed", title: "Stability", value: stabilityOk ? "Steady" : "Review motion/timing", passed: stabilityOk))
+        qualityChecks.append(SessionCheck(icon: "eye", title: "Sharpness", value: blur.map { "\($0.format0())/100" } ?? "Not analyzed", passed: sharpnessOk))
+
+        recordingStats.append(RecordingStat(icon: "clock", label: "Duration", value: durationText))
+        recordingStats.append(RecordingStat(icon: "hand.raised", label: "Hand Visibility", value: "\(Int(handRate.rounded()))%"))
+        recordingStats.append(RecordingStat(icon: "rectangle.grid.1x2", label: "Frames Analyzed", value: "\(framesAnalyzed)"))
+        recordingStats.append(RecordingStat(icon: "gauge.with.dots.needle.67percent", label: "Stability", value: stabilityOk ? "Good" : "Review"))
+        recordingStats.append(RecordingStat(icon: "waveform.path.ecg", label: "IMU Samples", value: "\(imuSamples)"))
+        recordingStats.append(RecordingStat(icon: "sensor.tag.radiowaves.forward", label: "IMU Rate", value: "\(imuRate.format0())Hz"))
+
+        if let passCriteria = technical?.dict("passCriteria") {
+            let technicalVideo = technical?.dict("video")
+            let technicalImu = technical?.dict("imu")
+            let technicalTiming = technical?.dict("timing")
+            let technicalCalibration = technical?.dict("calibration")
+            let technicalEncoding = technical?.dict("videoEncoding")
+
+            _ = technicalVideo
+            _ = technicalImu
+            _ = technicalTiming
+            _ = technicalCalibration
+            _ = technicalEncoding
+            _ = passCriteria
+        }
+
+        _ = cameraDiagnostics
+        _ = imuIntrinsics
+        _ = manifest
+
+        let passedChecks = qualityChecks.filter { $0.passed }.count
+        let computedScore = Int((Double(passedChecks) / Double(Swift.max(qualityChecks.count, 1)) * 100.0).rounded())
+        let reportScore = qcReport?.double("readinessScore").map { Int($0.rounded()).clamped(to: 0...100) }
+        let score = reportScore ?? computedScore
+        let scoreLabel = score >= 85 ? "Upload Ready" : (score >= 65 ? "Needs Review" : "Blocked")
+        let scoreDetail = score >= 85 ? "Recording passed all quality checks." : "Review failed checks before upload."
+
+        return SessionDetailSummary(
+            title: title,
+            timestampText: timestampText,
+            durationText: durationText,
+            fileSizeText: fileSizeText,
+            score: score,
+            scoreLabel: scoreLabel,
+            scoreDetail: scoreDetail,
+            videoURL: videoURL,
+            s3Prefix: upload.map { "s3://kaivideo/\($0.collectorId)/\($0.sessionId)" },
+            qualityChecks: qualityChecks,
+            recordingStats: recordingStats
+        )
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private static func readJSON(base: String, ext: String, in directory: URL) -> [String: Any]? {
+        guard let url = SessionFiles.resolveExisting(base, ext, in: directory),
+              let data = try? Data(contentsOf: url),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        return object
+    }
+
+    private static func readJSONLines(base: String, ext: String, in directory: URL) -> [[String: Any]] {
+        guard let url = SessionFiles.resolveExisting(base, ext, in: directory),
+              let text = try? String(contentsOf: url, encoding: .utf8) else {
+            return []
+        }
+        return text
+            .split(separator: "\n")
+            .compactMap { line in
+                guard let data = String(line).data(using: .utf8),
+                      let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    return nil
+                }
+                return object
+            }
+    }
+
+    private static func average(_ values: [Double]) -> Double? {
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    private static func normalizeBrightness(_ value: Double?) -> Double? {
+        guard let value else { return nil }
+        let normalized = value <= 1.0 ? value * 100.0 : value
+        return normalized.clamped(to: 0...100)
+    }
+
+    private static func normalizeSharpness(_ value: Double?) -> Double? {
+        guard let value else { return nil }
+        // Older iOS frame_qc_metrics stored raw Laplacian variance; QC expects 0...100.
+        let normalized = value > 100.0 ? min(100.0, max(10.0, (value / 2500.0) * 100.0)) : value
+        return normalized.clamped(to: 0...100)
+    }
+
+    private static func fileSize(at url: URL) -> Int64? {
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey])
+        return values?.fileSize.map(Int64.init)
+    }
+
+    private static func formatDuration(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds > 0 else { return "n/a" }
+        let total = Int(seconds.rounded())
+        return "\(total / 60):\(String(format: "%02d", total % 60))"
+    }
+}
+
+private struct SessionCheck: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let value: String
+    let passed: Bool
+}
+
+private struct RecordingStat: Identifiable {
+    let id = UUID()
+    let icon: String
+    let label: String
+    let value: String
+}
+
+private struct SessionVideoHeader: View {
+    let summary: SessionDetailSummary
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            GlassCard(cornerRadius: 24) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.black.opacity(0.86))
+
+                    if let player {
+                        VideoPlayer(player: player)
+                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    } else {
+                        VStack(spacing: 10) {
+                            Image(systemName: "play.rectangle")
+                                .font(.system(size: 34, weight: .light))
+                            Text("Video unavailable")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .foregroundStyle(Color.white.opacity(0.72))
+                    }
+                }
+                .frame(height: 220)
+                .padding(6)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(summary.title)
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(KE.ink1)
+                    .lineLimit(2)
+
+                HStack(spacing: 10) {
+                    Label(summary.timestampText, systemImage: "calendar")
+                    Label(summary.durationText, systemImage: "clock")
+                    Text(summary.fileSizeText)
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(KE.ink2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+        }
+        .onAppear {
+            if player == nil, let url = summary.videoURL {
+                player = AVPlayer(url: url)
+            }
+        }
+        .onDisappear {
+            player?.pause()
+        }
+    }
+}
+
+private struct SessionScoreCard: View {
+    let summary: SessionDetailSummary
+
+    var body: some View {
+        GlassCard(cornerRadius: 22) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(scoreColor.opacity(0.22))
+                            .frame(width: 42, height: 42)
+                        Image(systemName: scoreIcon)
+                            .foregroundStyle(scoreColor)
+                            .font(.system(size: 20, weight: .semibold))
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(summary.scoreLabel)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(scoreColor)
+                        Text(summary.scoreDetail)
+                            .font(.system(size: 13))
+                            .foregroundStyle(KE.ink2)
+                    }
+                    Spacer()
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Session Score")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(KE.ink2)
+                        Spacer()
+                        Text("\(summary.score)")
+                            .font(.system(size: 28, weight: .bold).monospacedDigit())
+                            .foregroundStyle(scoreColor)
+                    }
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(KE.ink1.opacity(0.10))
+                            Capsule()
+                                .fill(scoreColor)
+                                .frame(width: proxy.size.width * CGFloat(summary.score) / 100.0)
+                        }
+                    }
+                    .frame(height: 10)
+                }
+            }
+            .padding(18)
+        }
+    }
+
+    private var scoreColor: Color {
+        summary.score >= 85 ? SessionTone.green : (summary.score >= 65 ? SessionTone.amber : SessionTone.red)
+    }
+
+    private var scoreIcon: String {
+        summary.score >= 85 ? "checkmark.circle.fill" : (summary.score >= 65 ? "exclamationmark.triangle.fill" : "xmark.octagon.fill")
+    }
+}
+
+private struct QualityChecksCard: View {
+    let checks: [SessionCheck]
+
+    var body: some View {
+        GlassCard(cornerRadius: 22) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(icon: "clipboard", title: "Quality Checks")
+                ForEach(checks) { check in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(check.passed ? SessionTone.greenFill : SessionTone.redFill)
+                                .frame(width: 40, height: 40)
+                            Image(systemName: check.icon)
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundStyle(check.passed ? SessionTone.green : SessionTone.red)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(check.title)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(KE.ink1)
+                            Text(check.value)
+                                .font(.system(size: 12))
+                                .foregroundStyle(KE.ink2)
+                        }
+                        Spacer()
+                        Text(check.passed ? "Good" : "Review")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(check.passed ? SessionTone.green : SessionTone.red)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(check.passed ? SessionTone.greenFill : SessionTone.redFill, in: Capsule())
+                    }
+                    if check.id != checks.last?.id {
+                        Divider().overlay(KE.edgeShadow.opacity(0.35))
+                    }
+                }
+            }
+            .padding(18)
+        }
+    }
+}
+
+private struct RecordingStatsCard: View {
+    let stats: [RecordingStat]
+    private let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+
+    var body: some View {
+        GlassCard(cornerRadius: 22) {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionHeader(icon: "chart.bar", title: "Recording Stats")
+                LazyVGrid(columns: columns, spacing: 8) {
+                    ForEach(stats) { stat in
+                        HStack(spacing: 8) {
+                            Image(systemName: stat.icon)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(SessionTone.green)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(stat.label)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(KE.ink3)
+                                Text(stat.value)
+                                    .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                                    .foregroundStyle(KE.ink1)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(12)
+                        .background(KE.ghostTint.opacity(0.20), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(KE.edgeBright.opacity(0.35), lineWidth: 1)
+                        )
+                    }
+                }
+            }
+            .padding(18)
+        }
+    }
+}
+
+private struct RecordingStatusCard: View {
+    let summary: SessionDetailSummary
+    let sessionId: String
+
+    var body: some View {
+        GlassCard(cornerRadius: 22) {
+            VStack(alignment: .leading, spacing: 8) {
+                SectionHeader(icon: "tray.and.arrow.up", title: "Recording Status")
+                Text(summary.s3Prefix == nil ? "Local session" : "Upload path ready")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(KE.ink1)
+                Text(summary.s3Prefix ?? "Session \(sessionId) is saved locally and ready for analysis/upload.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(KE.ink2)
+                    .textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+        }
+    }
+}
+
+private struct SectionHeader: View {
+    let icon: String
+    let title: String
+
+    var body: some View {
+        Label(title, systemImage: icon)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(KE.ink1)
+    }
+}
+
+private struct TestSummaryItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let status: String
+    let detail: String
+    let passed: Bool?
+}
+
+private struct TestSummaryRow: View {
+    let item: TestSummaryItem
+
+    var body: some View {
+        GlassCard(cornerRadius: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(item.title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(KE.ink1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(item.status)
+                        .font(.system(size: 11, weight: .bold).monospacedDigit())
+                        .foregroundStyle(statusColor)
+                }
+                Text(item.detail)
+                    .font(.system(size: 12))
+                    .foregroundStyle(KE.ink2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private var statusColor: Color {
+        switch item.passed {
+        case true: return SessionTone.green
+        case false: return SessionTone.red
+        case nil: return KE.ink2
+        }
+    }
+}
+
+private extension Dictionary where Key == String, Value == Any {
+    func dict(_ key: String) -> [String: Any]? {
+        self[key] as? [String: Any]
+    }
+
+    func string(_ key: String) -> String? {
+        self[key] as? String
+    }
+
+    func bool(_ key: String) -> Bool? {
+        self[key] as? Bool
+    }
+
+    func int(_ key: String) -> Int? {
+        if let value = self[key] as? Int { return value }
+        if let value = self[key] as? Double { return Int(value) }
+        return nil
+    }
+
+    func double(_ key: String) -> Double? {
+        if let value = self[key] as? Double { return value }
+        if let value = self[key] as? Int { return Double(value) }
+        return nil
+    }
+
+    func arrayCount(_ key: String) -> Int {
+        (self[key] as? [Any])?.count ?? 0
+    }
+}
+
+private extension Optional where Wrapped == Double {
+    func format1() -> String {
+        guard let self else { return "n/a" }
+        return String(format: "%.1f", self)
+    }
+
+    func format0() -> String {
+        guard let self else { return "n/a" }
+        return String(format: "%.0f", self)
+    }
+}
+
+private extension Double {
+    func format0() -> String {
+        String(format: "%.0f", self)
+    }
+
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+private extension Int {
+    func clamped(to range: ClosedRange<Int>) -> Int {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 

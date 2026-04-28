@@ -36,8 +36,8 @@ final class FrameQCService {
     ) {
         let epochMs = recordingStartEpochMs + relativeMs
         
-        let brightness = computeBrightness(pixelBuffer: pixelBuffer)
-        let blur = computeBlurScore(pixelBuffer: pixelBuffer)
+        let brightness = normalizeBrightness(computeBrightness(pixelBuffer: pixelBuffer))
+        let blur = normalizeBlur(computeBlurScore(pixelBuffer: pixelBuffer))
         
         let sample = FrameQCMetricsSample(
             timestampEpochMs: epochMs,
@@ -75,8 +75,8 @@ final class FrameQCService {
         let blurMean = blurValues.reduce(0, +) / n
         let blurStd = standardDeviation(blurValues, mean: blurMean)
         
-        let darkFrameRate = Double(brightnessValues.filter { $0 < 0.15 }.count) / n
-        let blurryFrameRate = Double(blurValues.filter { $0 < 50.0 }.count) / n
+        let darkFrameRate = Double(brightnessValues.filter { $0 < 35.0 }.count) / n
+        let blurryFrameRate = Double(blurValues.filter { $0 < 40.0 }.count) / n
         
         return QCSummary(
             totalFrames: totalFrames,
@@ -139,6 +139,14 @@ final class FrameQCService {
         }
         
         return count > 0 ? sum / Double(count) : 0
+    }
+
+    private func normalizeBrightness(_ value: Double) -> Double {
+        min(100.0, max(0.0, pow(value, 1.0 / 2.2) * 100.0))
+    }
+
+    private func normalizeBlur(_ variance: Double) -> Double {
+        min(100.0, max(10.0, (variance / 2500.0) * 100.0))
     }
     
     /// Blur score via Laplacian variance. Higher = sharper image.

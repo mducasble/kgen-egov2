@@ -6,6 +6,7 @@ project 'EgoCapture.xcodeproj'
 
 target 'EgoCapture' do
   pod 'MediaPipeTasksVision'
+  pod 'GoogleSignIn'
 end
 
 # MediaPipe ships as a static binary inside `MediaPipeTasksCommon.framework`

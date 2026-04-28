@@ -5,9 +5,9 @@ struct FrameQCMetricsSample: Codable {
     let timestampEpochMs: Double
     let relativeMs: Double
     let frameIndex: Int
-    /// Average brightness [0.0, 1.0]
+    /// Perceptual brightness score [0.0, 100.0]
     let brightnessScore: Double
-    /// Blur score via Laplacian variance. Higher = sharper.
+    /// Sharpness score [0.0, 100.0]. Higher = sharper.
     let blurScore: Double
     /// Whether any hand was detected in this frame
     let handDetected: Bool

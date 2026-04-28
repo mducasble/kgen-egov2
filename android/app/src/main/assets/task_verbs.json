@@ -1,0 +1,1107 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-04-21",
+  "entries": [
+    {
+      "task_category_code": "childcare",
+      "verbs_pt": [
+        "alimentar",
+        "vestir",
+        "dar banho",
+        "trocar fralda",
+        "brincar",
+        "ninar",
+        "acalmar",
+        "supervisionar"
+      ],
+      "verbs_en": [
+        "feed",
+        "dress",
+        "bathe",
+        "change diaper",
+        "play",
+        "soothe",
+        "calm",
+        "supervise"
+      ],
+      "verbs_es": [
+        "alimentar",
+        "vestir",
+        "bañar",
+        "cambiar pañal",
+        "jugar",
+        "arrullar",
+        "calmar",
+        "supervisar"
+      ]
+    },
+    {
+      "task_category_code": "eldercare",
+      "verbs_pt": [
+        "auxiliar mobilidade",
+        "administrar medicação",
+        "alimentar",
+        "higienizar",
+        "acompanhar",
+        "monitorar",
+        "conversar"
+      ],
+      "verbs_en": [
+        "assist mobility",
+        "administer medication",
+        "feed",
+        "clean",
+        "accompany",
+        "monitor",
+        "converse"
+      ],
+      "verbs_es": [
+        "asistir movilidad",
+        "administrar medicación",
+        "alimentar",
+        "higienizar",
+        "acompañar",
+        "monitorear",
+        "conversar"
+      ]
+    },
+    {
+      "task_category_code": "pet_care",
+      "verbs_pt": [
+        "alimentar",
+        "dar água",
+        "dar banho",
+        "escovar",
+        "passear",
+        "brincar",
+        "limpar caixa",
+        "aparar unhas"
+      ],
+      "verbs_en": [
+        "feed",
+        "water",
+        "bathe",
+        "brush",
+        "walk",
+        "play",
+        "clean litter",
+        "trim nails"
+      ],
+      "verbs_es": [
+        "alimentar",
+        "dar agua",
+        "bañar",
+        "cepillar",
+        "pasear",
+        "jugar",
+        "limpiar arenero",
+        "cortar uñas"
+      ]
+    },
+    {
+      "task_category_code": "pet_training",
+      "verbs_pt": [
+        "comandar",
+        "recompensar",
+        "corrigir",
+        "socializar",
+        "repetir",
+        "guiar na coleira"
+      ],
+      "verbs_en": [
+        "command",
+        "reward",
+        "correct",
+        "socialize",
+        "repeat",
+        "leash guide"
+      ],
+      "verbs_es": [
+        "ordenar",
+        "recompensar",
+        "corregir",
+        "socializar",
+        "repetir",
+        "guiar con correa"
+      ]
+    },
+    {
+      "task_category_code": "plant_care",
+      "verbs_pt": [
+        "regar",
+        "podar",
+        "adubar",
+        "replantar",
+        "remover folhas secas",
+        "pulverizar",
+        "inspecionar pragas"
+      ],
+      "verbs_en": [
+        "water",
+        "prune",
+        "fertilize",
+        "repot",
+        "remove dead leaves",
+        "spray",
+        "inspect for pests"
+      ],
+      "verbs_es": [
+        "regar",
+        "podar",
+        "abonar",
+        "trasplantar",
+        "quitar hojas secas",
+        "pulverizar",
+        "inspeccionar plagas"
+      ]
+    },
+    {
+      "task_category_code": "carrying",
+      "verbs_pt": [
+        "levantar",
+        "carregar",
+        "empilhar",
+        "transportar",
+        "descarregar",
+        "posicionar"
+      ],
+      "verbs_en": [
+        "lift",
+        "carry",
+        "stack",
+        "transport",
+        "unload",
+        "position"
+      ],
+      "verbs_es": [
+        "levantar",
+        "cargar",
+        "apilar",
+        "transportar",
+        "descargar",
+        "posicionar"
+      ]
+    },
+    {
+      "task_category_code": "shopping",
+      "verbs_pt": [
+        "listar",
+        "procurar",
+        "selecionar",
+        "comparar",
+        "pesar",
+        "pagar",
+        "ensacar",
+        "carregar"
+      ],
+      "verbs_en": [
+        "list",
+        "browse",
+        "select",
+        "compare",
+        "weigh",
+        "pay",
+        "bag",
+        "carry"
+      ],
+      "verbs_es": [
+        "listar",
+        "buscar",
+        "seleccionar",
+        "comparar",
+        "pesar",
+        "pagar",
+        "embolsar",
+        "cargar"
+      ]
+    },
+    {
+      "task_category_code": "baking",
+      "verbs_pt": [
+        "medir",
+        "misturar",
+        "sovar",
+        "modelar",
+        "deixar crescer",
+        "assar",
+        "decorar",
+        "desenformar"
+      ],
+      "verbs_en": [
+        "measure",
+        "mix",
+        "knead",
+        "shape",
+        "proof",
+        "bake",
+        "decorate",
+        "unmold"
+      ],
+      "verbs_es": [
+        "medir",
+        "mezclar",
+        "amasar",
+        "dar forma",
+        "leudar",
+        "hornear",
+        "decorar",
+        "desmoldar"
+      ]
+    },
+    {
+      "task_category_code": "beverage_preparation",
+      "verbs_pt": [
+        "medir",
+        "moer",
+        "ferver",
+        "coar",
+        "misturar",
+        "servir",
+        "adoçar",
+        "gelar"
+      ],
+      "verbs_en": [
+        "measure",
+        "grind",
+        "boil",
+        "strain",
+        "mix",
+        "serve",
+        "sweeten",
+        "chill"
+      ],
+      "verbs_es": [
+        "medir",
+        "moler",
+        "hervir",
+        "colar",
+        "mezclar",
+        "servir",
+        "endulzar",
+        "enfriar"
+      ]
+    },
+    {
+      "task_category_code": "cooking",
+      "verbs_pt": [
+        "aquecer",
+        "fritar",
+        "refogar",
+        "ferver",
+        "grelhar",
+        "assar",
+        "temperar",
+        "provar",
+        "mexer"
+      ],
+      "verbs_en": [
+        "heat",
+        "fry",
+        "sauté",
+        "boil",
+        "grill",
+        "roast",
+        "season",
+        "taste",
+        "stir"
+      ],
+      "verbs_es": [
+        "calentar",
+        "freír",
+        "sofreír",
+        "hervir",
+        "asar a la parrilla",
+        "hornear",
+        "sazonar",
+        "probar",
+        "revolver"
+      ]
+    },
+    {
+      "task_category_code": "eating",
+      "verbs_pt": [
+        "servir-se",
+        "mastigar",
+        "beber",
+        "degustar",
+        "cortar",
+        "usar talheres"
+      ],
+      "verbs_en": [
+        "serve oneself",
+        "chew",
+        "drink",
+        "taste",
+        "cut",
+        "use utensils"
+      ],
+      "verbs_es": [
+        "servirse",
+        "masticar",
+        "beber",
+        "degustar",
+        "cortar",
+        "usar cubiertos"
+      ]
+    },
+    {
+      "task_category_code": "food_preparation",
+      "verbs_pt": [
+        "separar",
+        "lavar",
+        "descascar",
+        "cortar",
+        "picar",
+        "medir",
+        "marinar",
+        "misturar"
+      ],
+      "verbs_en": [
+        "separate",
+        "wash",
+        "peel",
+        "cut",
+        "chop",
+        "measure",
+        "marinate",
+        "mix"
+      ],
+      "verbs_es": [
+        "separar",
+        "lavar",
+        "pelar",
+        "cortar",
+        "picar",
+        "medir",
+        "marinar",
+        "mezclar"
+      ]
+    },
+    {
+      "task_category_code": "food_serving",
+      "verbs_pt": [
+        "empratar",
+        "porcionar",
+        "decorar",
+        "montar mesa",
+        "servir",
+        "distribuir"
+      ],
+      "verbs_en": [
+        "plate",
+        "portion",
+        "garnish",
+        "set table",
+        "serve",
+        "distribute"
+      ],
+      "verbs_es": [
+        "emplatar",
+        "porcionar",
+        "decorar",
+        "poner la mesa",
+        "servir",
+        "distribuir"
+      ]
+    },
+    {
+      "task_category_code": "assembly",
+      "verbs_pt": [
+        "desembalar",
+        "separar peças",
+        "ler instruções",
+        "alinhar",
+        "parafusar",
+        "encaixar",
+        "apertar"
+      ],
+      "verbs_en": [
+        "unbox",
+        "sort parts",
+        "read instructions",
+        "align",
+        "screw",
+        "fit",
+        "tighten"
+      ],
+      "verbs_es": [
+        "desembalar",
+        "separar piezas",
+        "leer instrucciones",
+        "alinear",
+        "atornillar",
+        "encajar",
+        "apretar"
+      ]
+    },
+    {
+      "task_category_code": "crafting",
+      "verbs_pt": [
+        "medir",
+        "cortar",
+        "colar",
+        "costurar",
+        "tricotar",
+        "pintar",
+        "modelar",
+        "decorar"
+      ],
+      "verbs_en": [
+        "measure",
+        "cut",
+        "glue",
+        "sew",
+        "knit",
+        "paint",
+        "mold",
+        "decorate"
+      ],
+      "verbs_es": [
+        "medir",
+        "cortar",
+        "pegar",
+        "coser",
+        "tejer",
+        "pintar",
+        "moldear",
+        "decorar"
+      ]
+    },
+    {
+      "task_category_code": "maintenance",
+      "verbs_pt": [
+        "inspecionar",
+        "limpar",
+        "lubrificar",
+        "ajustar",
+        "trocar peça",
+        "testar"
+      ],
+      "verbs_en": [
+        "inspect",
+        "clean",
+        "lubricate",
+        "adjust",
+        "replace part",
+        "test"
+      ],
+      "verbs_es": [
+        "inspeccionar",
+        "limpiar",
+        "lubricar",
+        "ajustar",
+        "cambiar pieza",
+        "probar"
+      ]
+    },
+    {
+      "task_category_code": "repair",
+      "verbs_pt": [
+        "diagnosticar",
+        "desmontar",
+        "consertar",
+        "soldar",
+        "colar",
+        "remontar",
+        "testar"
+      ],
+      "verbs_en": [
+        "diagnose",
+        "disassemble",
+        "fix",
+        "solder",
+        "glue",
+        "reassemble",
+        "test"
+      ],
+      "verbs_es": [
+        "diagnosticar",
+        "desmontar",
+        "reparar",
+        "soldar",
+        "pegar",
+        "remontar",
+        "probar"
+      ]
+    },
+    {
+      "task_category_code": "cleaning",
+      "verbs_pt": [
+        "varrer",
+        "aspirar",
+        "passar pano",
+        "esfregar",
+        "tirar pó",
+        "desinfetar",
+        "polir"
+      ],
+      "verbs_en": [
+        "sweep",
+        "vacuum",
+        "mop",
+        "scrub",
+        "dust",
+        "disinfect",
+        "polish"
+      ],
+      "verbs_es": [
+        "barrer",
+        "aspirar",
+        "trapear",
+        "fregar",
+        "quitar el polvo",
+        "desinfectar",
+        "pulir"
+      ]
+    },
+    {
+      "task_category_code": "dishwashing",
+      "verbs_pt": [
+        "recolher",
+        "raspar restos",
+        "ensaboar",
+        "esfregar",
+        "enxaguar",
+        "secar",
+        "guardar"
+      ],
+      "verbs_en": [
+        "collect",
+        "scrape",
+        "soap",
+        "scrub",
+        "rinse",
+        "dry",
+        "put away"
+      ],
+      "verbs_es": [
+        "recoger",
+        "raspar restos",
+        "enjabonar",
+        "fregar",
+        "enjuagar",
+        "secar",
+        "guardar"
+      ]
+    },
+    {
+      "task_category_code": "laundry",
+      "verbs_pt": [
+        "separar",
+        "pré-tratar manchas",
+        "lavar",
+        "centrifugar",
+        "estender",
+        "secar",
+        "passar",
+        "dobrar",
+        "guardar"
+      ],
+      "verbs_en": [
+        "sort",
+        "pretreat stains",
+        "wash",
+        "spin",
+        "hang",
+        "dry",
+        "iron",
+        "fold",
+        "put away"
+      ],
+      "verbs_es": [
+        "separar",
+        "pretratar manchas",
+        "lavar",
+        "centrifugar",
+        "tender",
+        "secar",
+        "planchar",
+        "doblar",
+        "guardar"
+      ]
+    },
+    {
+      "task_category_code": "tidying",
+      "verbs_pt": [
+        "recolher",
+        "agrupar",
+        "organizar",
+        "guardar",
+        "alinhar",
+        "etiquetar"
+      ],
+      "verbs_en": [
+        "pick up",
+        "group",
+        "organize",
+        "put away",
+        "align",
+        "label"
+      ],
+      "verbs_es": [
+        "recoger",
+        "agrupar",
+        "organizar",
+        "guardar",
+        "alinear",
+        "etiquetar"
+      ]
+    },
+    {
+      "task_category_code": "waste_management",
+      "verbs_pt": [
+        "separar",
+        "ensacar",
+        "compactar",
+        "levar para fora",
+        "reciclar",
+        "compostar"
+      ],
+      "verbs_en": [
+        "sort",
+        "bag",
+        "compact",
+        "take out",
+        "recycle",
+        "compost"
+      ],
+      "verbs_es": [
+        "separar",
+        "embolsar",
+        "compactar",
+        "sacar",
+        "reciclar",
+        "compostar"
+      ]
+    },
+    {
+      "task_category_code": "commuting",
+      "verbs_pt": [
+        "caminhar",
+        "esperar",
+        "embarcar",
+        "atravessar",
+        "subir escada",
+        "desembarcar"
+      ],
+      "verbs_en": [
+        "walk",
+        "wait",
+        "board",
+        "cross",
+        "climb stairs",
+        "disembark"
+      ],
+      "verbs_es": [
+        "caminar",
+        "esperar",
+        "abordar",
+        "cruzar",
+        "subir escaleras",
+        "desembarcar"
+      ]
+    },
+    {
+      "task_category_code": "driving",
+      "verbs_pt": [
+        "dar partida",
+        "engatar",
+        "acelerar",
+        "frear",
+        "estacionar",
+        "sinalizar",
+        "manobrar",
+        "abastecer"
+      ],
+      "verbs_en": [
+        "start",
+        "shift gear",
+        "accelerate",
+        "brake",
+        "park",
+        "signal",
+        "maneuver",
+        "refuel"
+      ],
+      "verbs_es": [
+        "arrancar",
+        "cambiar marcha",
+        "acelerar",
+        "frenar",
+        "estacionar",
+        "señalizar",
+        "maniobrar",
+        "repostar"
+      ]
+    },
+    {
+      "task_category_code": "gardening",
+      "verbs_pt": [
+        "cavar",
+        "plantar",
+        "regar",
+        "podar",
+        "adubar",
+        "colher",
+        "remover ervas daninhas",
+        "cortar grama"
+      ],
+      "verbs_en": [
+        "dig",
+        "plant",
+        "water",
+        "prune",
+        "fertilize",
+        "harvest",
+        "weed",
+        "mow"
+      ],
+      "verbs_es": [
+        "cavar",
+        "plantar",
+        "regar",
+        "podar",
+        "abonar",
+        "cosechar",
+        "desherbar",
+        "cortar césped"
+      ]
+    },
+    {
+      "task_category_code": "studying",
+      "verbs_pt": [
+        "ler",
+        "anotar",
+        "grifar",
+        "resolver exercícios",
+        "resumir",
+        "revisar",
+        "memorizar"
+      ],
+      "verbs_en": [
+        "read",
+        "take notes",
+        "highlight",
+        "solve exercises",
+        "summarize",
+        "review",
+        "memorize"
+      ],
+      "verbs_es": [
+        "leer",
+        "anotar",
+        "subrayar",
+        "resolver ejercicios",
+        "resumir",
+        "revisar",
+        "memorizar"
+      ]
+    },
+    {
+      "task_category_code": "working_desk",
+      "verbs_pt": [
+        "digitar",
+        "ler",
+        "escrever",
+        "revisar",
+        "reunir",
+        "apresentar",
+        "responder email",
+        "planejar"
+      ],
+      "verbs_en": [
+        "type",
+        "read",
+        "write",
+        "review",
+        "meet",
+        "present",
+        "reply email",
+        "plan"
+      ],
+      "verbs_es": [
+        "teclear",
+        "leer",
+        "escribir",
+        "revisar",
+        "reunir",
+        "presentar",
+        "responder email",
+        "planificar"
+      ]
+    },
+    {
+      "task_category_code": "exercise",
+      "verbs_pt": [
+        "aquecer",
+        "alongar",
+        "correr",
+        "pedalar",
+        "levantar peso",
+        "agachar",
+        "respirar",
+        "desaquecer"
+      ],
+      "verbs_en": [
+        "warm up",
+        "stretch",
+        "run",
+        "cycle",
+        "lift weights",
+        "squat",
+        "breathe",
+        "cool down"
+      ],
+      "verbs_es": [
+        "calentar",
+        "estirar",
+        "correr",
+        "pedalear",
+        "levantar pesas",
+        "sentadillas",
+        "respirar",
+        "enfriar"
+      ]
+    },
+    {
+      "task_category_code": "leisure",
+      "verbs_pt": [
+        "assistir",
+        "jogar",
+        "ler",
+        "relaxar",
+        "ouvir",
+        "navegar"
+      ],
+      "verbs_en": [
+        "watch",
+        "play",
+        "read",
+        "relax",
+        "listen",
+        "browse"
+      ],
+      "verbs_es": [
+        "ver",
+        "jugar",
+        "leer",
+        "relajarse",
+        "escuchar",
+        "navegar"
+      ]
+    },
+    {
+      "task_category_code": "music_practice",
+      "verbs_pt": [
+        "afinar",
+        "aquecer",
+        "tocar",
+        "cantar",
+        "gravar",
+        "repetir trecho",
+        "improvisar",
+        "ler partitura"
+      ],
+      "verbs_en": [
+        "tune",
+        "warm up",
+        "play",
+        "sing",
+        "record",
+        "repeat passage",
+        "improvise",
+        "read sheet music"
+      ],
+      "verbs_es": [
+        "afinar",
+        "calentar",
+        "tocar",
+        "cantar",
+        "grabar",
+        "repetir pasaje",
+        "improvisar",
+        "leer partitura"
+      ]
+    },
+    {
+      "task_category_code": "sports",
+      "verbs_pt": [
+        "aquecer",
+        "correr",
+        "chutar",
+        "rebater",
+        "passar",
+        "defender",
+        "pontuar",
+        "descansar"
+      ],
+      "verbs_en": [
+        "warm up",
+        "run",
+        "kick",
+        "hit",
+        "pass",
+        "defend",
+        "score",
+        "rest"
+      ],
+      "verbs_es": [
+        "calentar",
+        "correr",
+        "patear",
+        "batear",
+        "pasar",
+        "defender",
+        "anotar",
+        "descansar"
+      ]
+    },
+    {
+      "task_category_code": "grooming",
+      "verbs_pt": [
+        "pentear",
+        "escovar cabelo",
+        "barbear",
+        "depilar",
+        "cortar unhas",
+        "limar",
+        "aplicar produto"
+      ],
+      "verbs_en": [
+        "comb",
+        "brush hair",
+        "shave",
+        "wax",
+        "trim nails",
+        "file",
+        "apply product"
+      ],
+      "verbs_es": [
+        "peinar",
+        "cepillar cabello",
+        "afeitar",
+        "depilar",
+        "cortar uñas",
+        "limar",
+        "aplicar producto"
+      ]
+    },
+    {
+      "task_category_code": "health_care",
+      "verbs_pt": [
+        "medir pressão",
+        "medir glicemia",
+        "tomar medicamento",
+        "aplicar curativo",
+        "aplicar pomada",
+        "medir temperatura",
+        "registrar sintoma"
+      ],
+      "verbs_en": [
+        "measure blood pressure",
+        "measure blood sugar",
+        "take medication",
+        "apply bandage",
+        "apply ointment",
+        "measure temperature",
+        "log symptom"
+      ],
+      "verbs_es": [
+        "medir presión",
+        "medir glucosa",
+        "tomar medicamento",
+        "aplicar vendaje",
+        "aplicar pomada",
+        "medir temperatura",
+        "registrar síntoma"
+      ]
+    },
+    {
+      "task_category_code": "personal_care",
+      "verbs_pt": [
+        "tomar banho",
+        "escovar dentes",
+        "passar fio dental",
+        "lavar rosto",
+        "hidratar pele",
+        "vestir-se",
+        "maquiar-se"
+      ],
+      "verbs_en": [
+        "shower",
+        "brush teeth",
+        "floss",
+        "wash face",
+        "moisturize",
+        "dress",
+        "apply makeup"
+      ],
+      "verbs_es": [
+        "ducharse",
+        "cepillar dientes",
+        "usar hilo dental",
+        "lavarse la cara",
+        "hidratar piel",
+        "vestirse",
+        "maquillarse"
+      ]
+    },
+    {
+      "task_category_code": "communication",
+      "verbs_pt": [
+        "ligar",
+        "atender",
+        "mensagear",
+        "videochamar",
+        "escutar",
+        "responder"
+      ],
+      "verbs_en": [
+        "call",
+        "answer",
+        "message",
+        "video call",
+        "listen",
+        "reply"
+      ],
+      "verbs_es": [
+        "llamar",
+        "contestar",
+        "mensajear",
+        "videollamar",
+        "escuchar",
+        "responder"
+      ]
+    },
+    {
+      "task_category_code": "socializing",
+      "verbs_pt": [
+        "cumprimentar",
+        "conversar",
+        "receber",
+        "apresentar",
+        "escutar",
+        "debater",
+        "despedir-se"
+      ],
+      "verbs_en": [
+        "greet",
+        "chat",
+        "host",
+        "introduce",
+        "listen",
+        "discuss",
+        "say goodbye"
+      ],
+      "verbs_es": [
+        "saludar",
+        "conversar",
+        "recibir",
+        "presentar",
+        "escuchar",
+        "debatir",
+        "despedirse"
+      ]
+    }
+  ]
+}
