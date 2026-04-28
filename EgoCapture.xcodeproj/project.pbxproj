@@ -38,11 +38,11 @@
 		AA000041 /* HandPoseDerivationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000041 /* HandPoseDerivationService.swift */; };
 		AA000042 /* FacePresenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000042 /* FacePresenceService.swift */; };
 		AA000043 /* FrameQCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000043 /* FrameQCService.swift */; };
-		AA000048 /* PostCaptureVisionAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000048 /* PostCaptureVisionAnalyzer.swift */; };
 		AA000044 /* FOVEnumerationDiagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000044 /* FOVEnumerationDiagnostic.swift */; };
 		AA000045 /* LensDistortionCalibration.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000045 /* LensDistortionCalibration.swift */; };
 		AA000046 /* PlumbBobFitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000046 /* PlumbBobFitter.swift */; };
 		AA000047 /* LensDistortionProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000047 /* LensDistortionProbeService.swift */; };
+		AA000048 /* PostCaptureVisionAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000048 /* PostCaptureVisionAnalyzer.swift */; };
 		AA000050 /* SessionPackagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000050 /* SessionPackagingService.swift */; };
 		AA000051 /* JSONLWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000051 /* JSONLWriter.swift */; };
 		AA000052 /* ProcessingScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000052 /* ProcessingScheduler.swift */; };
@@ -116,11 +116,11 @@
 		AB000041 /* HandPoseDerivationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandPoseDerivationService.swift; sourceTree = "<group>"; };
 		AB000042 /* FacePresenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacePresenceService.swift; sourceTree = "<group>"; };
 		AB000043 /* FrameQCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameQCService.swift; sourceTree = "<group>"; };
-		AB000048 /* PostCaptureVisionAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostCaptureVisionAnalyzer.swift; sourceTree = "<group>"; };
 		AB000044 /* FOVEnumerationDiagnostic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FOVEnumerationDiagnostic.swift; sourceTree = "<group>"; };
 		AB000045 /* LensDistortionCalibration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensDistortionCalibration.swift; sourceTree = "<group>"; };
 		AB000046 /* PlumbBobFitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlumbBobFitter.swift; sourceTree = "<group>"; };
 		AB000047 /* LensDistortionProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensDistortionProbeService.swift; sourceTree = "<group>"; };
+		AB000048 /* PostCaptureVisionAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostCaptureVisionAnalyzer.swift; sourceTree = "<group>"; };
 		AB000050 /* SessionPackagingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionPackagingService.swift; sourceTree = "<group>"; };
 		AB000051 /* JSONLWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLWriter.swift; sourceTree = "<group>"; };
 		AB000052 /* ProcessingScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingScheduler.swift; sourceTree = "<group>"; };
@@ -731,8 +731,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
-				DEVELOPMENT_TEAM = XK9N3ZV2U7;
+				CURRENT_PROJECT_VERSION = 9;
+				DEVELOPMENT_TEAM = NKUXUQ7HQW;
 				GENERATE_INFOPLIST_FILE = NO;
 				GOOGLE_CLIENT_ID = "$(inherited)";
 				GOOGLE_REVERSED_CLIENT_ID = "$(inherited)";
@@ -764,8 +764,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
-				DEVELOPMENT_TEAM = XK9N3ZV2U7;
+				CURRENT_PROJECT_VERSION = 9;
+				DEVELOPMENT_TEAM = NKUXUQ7HQW;
 				GENERATE_INFOPLIST_FILE = NO;
 				GOOGLE_CLIENT_ID = "$(inherited)";
 				GOOGLE_REVERSED_CLIENT_ID = "$(inherited)";
